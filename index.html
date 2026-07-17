@@ -1,0 +1,1374 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Camino a Madrid</title>
+<meta name="description" content="Rastreador diario de práctica de español — camino a Madrid, enero 2027.">
+<meta name="theme-color" content="#00819e" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1a19" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Madrid">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%2300819e'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='white' font-family='sans-serif'%3EM%3C/text%3E%3C/svg%3E">
+<style>
+  /* ============================================================
+     DESIGN TOKENS
+     Madrid Metro design language. Light/dark aware.
+     Phase colors validated for WCAG contrast — see README/PLAN
+     notes in the build report for details (validator script in
+     the dataviz skill requires Node, unavailable in this
+     environment; contrast ratios below were computed manually
+     with the WCAG relative-luminance formula and checked against
+     the skill's documented lightness/contrast bands).
+     ============================================================ */
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --surface-2:      #f9f9f7;
+    --surface-3:      #f1f0ec;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+
+    /* Phase (categorical, fixed order 1-2-3, reserved meaning) */
+    --phase1:      #00819e; /* Línea 1 — accessible light blue */
+    --phase1-ink:  #ffffff;
+    --phase2:      #E0292F; /* Línea 2 — accessible red */
+    --phase2-ink:  #ffffff;
+    --phase3:      #9c6a00; /* Línea 3 — accessible amber/gold */
+    --phase3-ink:  #ffffff;
+
+    /* Status (reserved, never reused for series identity) */
+    --status-good:  #0ca30c;
+    --status-gold:  #9c6a00;
+    --status-neutral-fill: #b9c4cc;
+
+    /* Sequential heatmap ramp (single hue: blue), light -> dark = more minutes */
+    --heat-0:  #ecebe7;
+    --heat-1:  #b7d3f6;
+    --heat-2:  #5598e7;
+    --heat-3:  #184f95;
+
+    --radius: 14px;
+    --tap: 44px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --surface-2:      #161615;
+      --surface-3:      #232320;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.12);
+
+      --phase1:      #3DC7F1;
+      --phase1-ink:  #0b0b0b;
+      --phase2:      #EB6A6E;
+      --phase2-ink:  #0b0b0b;
+      --phase3:      #E0A030;
+      --phase3-ink:  #0b0b0b;
+
+      --status-good:  #0ca30c;
+      --status-gold:  #E0A030;
+      --status-neutral-fill: #4a545c;
+
+      --heat-0:  #23231f;
+      --heat-1:  #184f95;
+      --heat-2:  #5598e7;
+      --heat-3:  #b7d3f6;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --surface-2:      #161615;
+    --surface-3:      #232320;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.12);
+
+    --phase1:      #3DC7F1;
+    --phase1-ink:  #0b0b0b;
+    --phase2:      #EB6A6E;
+    --phase2-ink:  #0b0b0b;
+    --phase3:      #E0A030;
+    --phase3-ink:  #0b0b0b;
+
+    --status-good:  #0ca30c;
+    --status-gold:  #E0A030;
+    --status-neutral-fill: #4a545c;
+
+    --heat-0:  #23231f;
+    --heat-1:  #184f95;
+    --heat-2:  #5598e7;
+    --heat-3:  #b7d3f6;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--surface-2);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.4;
+    padding-bottom: 48px;
+  }
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 14px;
+  }
+  a { color: var(--phase1); }
+
+  /* ---------- Header ---------- */
+  header.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 14px 6px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  header.app-header h1 {
+    font-size: 1.25rem;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  header.app-header h1 .sub {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  button.icon-btn {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: var(--tap);
+    height: var(--tap);
+    font-size: 1.1rem;
+    cursor: pointer;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  button.icon-btn:active { transform: scale(0.94); }
+
+  /* ---------- Banners ---------- */
+  .banner {
+    margin: 8px 14px;
+    max-width: 612px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    justify-content: space-between;
+  }
+  .banner-red   { background: #fdeceb; color: #7a1414; border: 1px solid #e0292f; }
+  .banner-amber { background: #fdf3df; color: #6b4a00; border: 1px solid #c98500; }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .banner-red   { background: #3a1616; color: #ff9d9d; border-color: #e66767; }
+    :root:where(:not([data-theme="light"])) .banner-amber { background: #332a10; color: #ffd479; border-color: #c98500; }
+  }
+  :root[data-theme="dark"] .banner-red   { background: #3a1616; color: #ff9d9d; border-color: #e66767; }
+  :root[data-theme="dark"] .banner-amber { background: #332a10; color: #ffd479; border-color: #c98500; }
+  .banner button.dismiss {
+    background: none; border: none; font-size: 1rem; cursor: pointer; color: inherit;
+    line-height: 1; padding: 2px 4px;
+  }
+  .banner strong { display:block; margin-bottom: 2px; }
+
+  /* ---------- Cards ---------- */
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin: 14px 0;
+  }
+  .card h2 {
+    font-size: 0.95rem;
+    margin: 0 0 10px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* ---------- Metro hero ---------- */
+  .metro-scroll {
+    overflow-x: auto;
+    padding: 18px 6px 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .metro-line {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: max-content;
+    padding: 0 20px;
+  }
+  .metro-line::before {
+    content: "";
+    position: absolute;
+    left: 20px; right: 20px; top: 50%;
+    height: 4px;
+    transform: translateY(-50%);
+    background: var(--gridline);
+    z-index: 0;
+    border-radius: 2px;
+  }
+  .station {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 30px;
+    flex: 0 0 30px;
+  }
+  .station .dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--surface-1);
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  .station.interchange .dot {
+    width: 18px; height: 18px;
+    box-shadow: 0 0 0 2px var(--surface-1), 0 0 0 4px currentColor;
+  }
+  .station.current .dot {
+    width: 24px; height: 24px;
+    box-shadow: 0 0 0 3px var(--surface-1), 0 0 0 5px currentColor;
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  .station.future .dot { opacity: 0.35; }
+  @media (prefers-reduced-motion: reduce) {
+    .station.current .dot { animation: none; }
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+  }
+  .station .wk-num {
+    font-size: 0.55rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .station.terminus .wk-num {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 0.6rem;
+  }
+  .metro-caption {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 2px 6px 0;
+    text-align: center;
+  }
+  .phase-legend {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    padding: 10px 6px 0;
+  }
+  .phase-legend .item { display: flex; align-items: center; gap: 5px; }
+  .phase-legend .swatch { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+
+  /* ---------- Today card ---------- */
+  .today-kind {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+  .prompt-es { font-size: 1.15rem; font-weight: 500; margin: 6px 0 2px; }
+  .prompt-en { font-size: 0.82rem; color: var(--text-muted); margin: 0 0 8px; }
+  .prompt-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .otro-link {
+    background: none; border: none; color: var(--phase1); text-decoration: none;
+    font-size: 0.82rem; cursor: pointer; white-space: nowrap; padding: 6px 2px;
+    min-height: var(--tap); display:flex; align-items:center;
+  }
+  .gliglish-link {
+    display: inline-block; margin-top: 8px; font-size: 0.85rem;
+    text-decoration: none; font-weight: 600;
+  }
+
+  .task-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-top: 10px;
+    cursor: pointer;
+    text-align: left;
+    color: var(--text-primary);
+    font: inherit;
+    min-height: var(--tap);
+  }
+  .task-row.done {
+    border-color: var(--status-good);
+    background: color-mix(in srgb, var(--status-good) 12%, var(--surface-2));
+  }
+  .task-check {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid var(--baseline);
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; color: var(--surface-1);
+  }
+  .task-row.done .task-check {
+    background: var(--status-good);
+    border-color: var(--status-good);
+  }
+  .task-label { flex: 1; font-size: 0.92rem; }
+  .task-label small { display:block; color: var(--text-muted); font-size: 0.72rem; }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .stepper button {
+    width: var(--tap); height: var(--tap);
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--text-primary);
+  }
+  .stepper button:active { transform: scale(0.94); }
+  .stepper .today-total {
+    min-width: 70px;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .stepper .today-total small { display:block; font-size: 0.65rem; font-weight: 400; color: var(--text-muted); }
+
+  .weekend-hint {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  /* ---------- Weekly meter ---------- */
+  .meter-track {
+    position: relative;
+    height: 26px;
+    border-radius: 13px;
+    background: var(--surface-3);
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .meter-fill {
+    height: 100%;
+    border-radius: 13px;
+    background: var(--status-neutral-fill);
+    transition: width 0.3s ease, background-color 0.3s ease;
+  }
+  .meter-fill.good { background: var(--status-good); }
+  .meter-fill.gold { background: var(--status-gold); }
+  .meter-tick {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: var(--text-primary);
+    opacity: 0.35;
+  }
+  .meter-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .meter-total {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  /* ---------- Heatmap ---------- */
+  .heatmap-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .heatmap-grid {
+    display: flex;
+    gap: 3px;
+    min-width: max-content;
+    padding: 2px 2px 2px 10px;
+  }
+  .heatmap-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    position: relative;
+  }
+  .heatmap-col.phase-edge { margin-left: 7px; }
+  .heatmap-col.phase-edge::before {
+    content: "";
+    position: absolute;
+    left: -5px; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--text-primary);
+    opacity: 0.35;
+    border-radius: 1px;
+  }
+  .heat-cell {
+    width: 13px; height: 13px;
+    border-radius: 3px;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    background: var(--heat-0);
+  }
+  .heat-cell.lvl1 { background: var(--heat-1); }
+  .heat-cell.lvl2 { background: var(--heat-2); }
+  .heat-cell.lvl3 { background: var(--heat-3); }
+  .heat-cell.future { opacity: 0.3; cursor: default; }
+  .heatmap-legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
+  .heatmap-legend .heat-cell { cursor: default; width: 11px; height: 11px; }
+  .heat-detail {
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    min-height: 1.2em;
+  }
+
+  /* ---------- Settings drawer ---------- */
+  .drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 40; display: none;
+  }
+  .drawer-overlay.open { display: block; }
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: min(360px, 90vw);
+    background: var(--surface-1);
+    z-index: 41;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    overflow-y: auto;
+    padding: 16px;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.2);
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer h2 { font-size: 1.05rem; margin-top: 0; }
+  .drawer label { display:block; font-size: 0.8rem; color: var(--text-secondary); margin: 12px 0 4px; }
+  .drawer input[type=text], .drawer input[type=password] {
+    width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text-primary); font-size: 0.9rem;
+    min-height: var(--tap);
+  }
+  .drawer button.primary {
+    margin-top: 14px; width: 100%; padding: 11px; border-radius: 10px; border: none;
+    background: var(--phase1); color: var(--phase1-ink); font-weight: 600; font-size: 0.9rem;
+    cursor: pointer; min-height: var(--tap);
+  }
+  .drawer button.secondary {
+    margin-top: 8px; width: 100%; padding: 11px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary);
+    font-weight: 600; font-size: 0.9rem; cursor: pointer; min-height: var(--tap);
+  }
+  .drawer .close-x {
+    position: absolute; top: 10px; right: 10px;
+  }
+  .drawer .sync-status { font-size: 0.78rem; color: var(--text-muted); margin-top: 10px; white-space: pre-wrap; }
+  .drawer hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .drawer .file-import { font-size: 0.82rem; }
+
+  /* ---------- Countdown / completed states ---------- */
+  .state-screen {
+    text-align: center;
+    padding: 40px 14px;
+  }
+  .state-screen .big { font-size: 2.4rem; font-weight: 700; margin: 10px 0; }
+  .state-screen p { color: var(--text-secondary); }
+
+  .error-banner-fatal {
+    background: #e0292f; color: #fff; padding: 14px; text-align: center;
+    font-weight: 700; position: sticky; top: 0; z-index: 50;
+  }
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  footer.app-footer {
+    text-align: center; font-size: 0.72rem; color: var(--text-muted); padding: 20px 14px 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="fatalBanner"></div>
+
+<header class="app-header">
+  <h1>Camino a Madrid<span class="sub">Enero 2027</span></h1>
+  <button class="icon-btn" id="settingsBtn" aria-label="Ajustes / Settings" title="Ajustes">⚙️</button>
+</header>
+
+<div id="banners"></div>
+
+<main class="wrap" id="mainContent"></main>
+
+<footer class="app-footer">Camino a Madrid · práctica diaria de español</footer>
+
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer" aria-hidden="true">
+  <button class="icon-btn close-x" id="drawerClose" aria-label="Cerrar ajustes">✕</button>
+  <h2>Ajustes</h2>
+
+  <label for="patInput">Token de GitHub (fine-grained PAT)</label>
+  <input type="password" id="patInput" placeholder="github_pat_…" autocomplete="off">
+
+  <label for="ownerInput">Owner (usuario/organización)</label>
+  <input type="text" id="ownerInput" placeholder="p.ej. alexf1688">
+
+  <label for="repoInput">Repo</label>
+  <input type="text" id="repoInput" placeholder="camino-a-madrid">
+
+  <button class="primary" id="saveSettingsBtn">Guardar ajustes</button>
+  <button class="secondary" id="testSyncBtn">Probar sincronización</button>
+  <div class="sync-status" id="syncStatus"></div>
+
+  <hr>
+  <div class="file-import">
+    <p style="margin:0 0 8px;color:var(--text-secondary)">Copia de seguridad sin token:</p>
+    <button class="secondary" id="exportBtn">Exportar JSON</button>
+    <label for="importInput" style="margin-top:10px">Importar JSON</label>
+    <input type="file" id="importInput" accept="application/json">
+  </div>
+  <hr>
+  <p style="font-size:0.72rem;color:var(--text-muted)">
+    El token se guarda solo en este dispositivo (localStorage). Nunca se envía a nadie más que a GitHub.
+  </p>
+</div>
+
+<script src="prompts.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     0. FATAL-ERROR HANDLING FOR prompts.js
+     ============================================================ */
+  function showFatal(msg) {
+    var el = document.getElementById("fatalBanner");
+    el.innerHTML = '<div class="error-banner-fatal">⚠ ' + msg + '</div>';
+  }
+
+  var PROMPTS_OK = true;
+  if (typeof PROMPTS === "undefined" || !Array.isArray(PROMPTS) || PROMPTS.length === 0) {
+    showFatal("prompts.js missing or broken — no se pudieron cargar las frases de práctica.");
+    PROMPTS_OK = false;
+  }
+
+  /* ============================================================
+     1. TIMELINE CONSTANTS
+     All date logic runs in the user's local timezone using
+     plain Date objects at local midnight (never UTC / ISO-Z).
+     ============================================================ */
+  var START_DATE = new Date(2026, 6, 17); // 2026-07-17 (Fri) — program start
+  var END_DATE   = new Date(2026, 11, 31); // 2026-12-31 (Thu) — program end
+  var PHASE1_END = new Date(2026, 7, 31);  // 2026-08-31 inclusive
+  var PHASE2_END = new Date(2026, 9, 31);  // 2026-10-31 inclusive
+  var TOTAL_WEEKS = 24;
+
+  // Monday on/before START_DATE — the grid's week-0 anchor.
+  // NOTE (deviation, documented): weeks are standard Monday-Sunday
+  // calendar weeks anchored here. 24 such weeks run 2026-07-13 ->
+  // 2026-12-27; the trailing 2026-12-28..12-31 (Mon-Thu) is folded
+  // into week 24 for display/logging so the hero keeps exactly 24
+  // stations. See README/build notes.
+  function mondayOnOrBefore(d) {
+    var day = d.getDay(); // 0=Sun..6=Sat
+    var diff = (day === 0) ? 6 : day - 1;
+    return addDays(d, -diff);
+  }
+  var WEEK0_MONDAY = mondayOnOrBefore(START_DATE);
+
+  function addDays(d, n) {
+    var r = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    r.setDate(r.getDate() + n);
+    return r;
+  }
+  function atMidnight(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function isoDate(d) {
+    var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+    return y + "-" + String(m).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+  }
+  function daysBetween(a, b) {
+    return Math.round((atMidnight(b) - atMidnight(a)) / 86400000);
+  }
+  function daysSinceEpoch(d) {
+    // days since Unix epoch, local calendar date
+    return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+  }
+
+  function phaseOfDate(d) {
+    if (d <= PHASE1_END) return 1;
+    if (d <= PHASE2_END) return 2;
+    return 3;
+  }
+  var PHASE_NAMES = { 1: "Reboot", 2: "Expansión", 3: "Simulación Madrid" };
+
+  // week index (0-based) for a given date, clamped into [0, TOTAL_WEEKS-1]
+  function weekIndexOf(d) {
+    var idx = Math.floor(daysBetween(WEEK0_MONDAY, d) / 7);
+    if (idx < 0) idx = 0;
+    if (idx > TOTAL_WEEKS - 1) idx = TOTAL_WEEKS - 1;
+    return idx;
+  }
+  // representative phase of a week (its Thursday) for hero coloring
+  function weekPhase(weekIdx) {
+    var thursday = addDays(WEEK0_MONDAY, weekIdx * 7 + 3);
+    return phaseOfDate(thursday);
+  }
+
+  var today = atMidnight(new Date());
+
+  /* ============================================================
+     2. STORAGE / DATA MODEL
+     ============================================================ */
+  var DATA_KEY = "camino-data";
+  var PAT_KEY = "camino-pat";
+  var SETTINGS_KEY = "camino-settings";
+
+  function loadData() {
+    try {
+      var raw = localStorage.getItem(DATA_KEY);
+      if (!raw) return { version: 1, updated: new Date().toISOString(), days: {} };
+      var parsed = JSON.parse(raw);
+      if (!parsed.days) parsed.days = {};
+      return parsed;
+    } catch (e) {
+      return { version: 1, updated: new Date().toISOString(), days: {} };
+    }
+  }
+  function saveData(data) {
+    data.updated = new Date().toISOString();
+    localStorage.setItem(DATA_KEY, JSON.stringify(data));
+    scheduleSync();
+  }
+  var DATA = loadData();
+
+  function loadSettings() {
+    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+  function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+  var SETTINGS = loadSettings();
+
+  function getPAT() { return localStorage.getItem(PAT_KEY) || ""; }
+  function setPAT(v) {
+    if (v) localStorage.setItem(PAT_KEY, v);
+    else localStorage.removeItem(PAT_KEY);
+  }
+
+  function detectOwnerRepo() {
+    var host = location.hostname;
+    if (host.endsWith(".github.io")) {
+      var owner = host.split(".")[0];
+      var parts = location.pathname.split("/").filter(Boolean);
+      var repo = parts.length ? parts[0] : "";
+      return { owner: owner, repo: repo };
+    }
+    return { owner: SETTINGS.owner || "", repo: SETTINGS.repo || "" };
+  }
+
+  /* ============================================================
+     3. BANNERS
+     ============================================================ */
+  var bannersEl = document.getElementById("banners");
+  var sessionDismissed = {};
+
+  function renderBanners() {
+    var html = "";
+    if (redBannerMsg) {
+      // Deliberately NOT dismissible (unlike the amber banner): the spec calls
+      // for a persistent red banner on sync failure. It only clears when a
+      // sync call actually succeeds (see clearRedBanner()).
+      html += '<div class="banner banner-red" role="alert"><div><strong>Error de sincronización</strong>' +
+        escapeHtml(redBannerMsg) + '</div></div>';
+    }
+    if (!getPAT() && !sessionDismissed.amber) {
+      html += '<div class="banner banner-amber"><div><strong>Sin sincronizar</strong>añade un token en ajustes' +
+        ' para sincronizar entre dispositivos.</div><button class="dismiss" data-dismiss="amber">✕</button></div>';
+    }
+    bannersEl.innerHTML = html;
+    bannersEl.querySelectorAll("[data-dismiss]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var kind = btn.getAttribute("data-dismiss");
+        if (kind === "amber") sessionDismissed.amber = true;
+        renderBanners();
+      });
+    });
+  }
+  var redBannerMsg = null;
+  function setRedBanner(msg) { redBannerMsg = msg; renderBanners(); }
+  function clearRedBanner() { redBannerMsg = null; renderBanners(); }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ============================================================
+     4. PROMPT SELECTION
+     ============================================================ */
+  function offsetKeyFor(dateStr) { return "camino-offset-" + dateStr; }
+  function getOffset(dateStr) {
+    var v = localStorage.getItem(offsetKeyFor(dateStr));
+    return v ? parseInt(v, 10) || 0 : 0;
+  }
+  function bumpOffset(dateStr) {
+    var v = getOffset(dateStr) + 1;
+    localStorage.setItem(offsetKeyFor(dateStr), String(v));
+    return v;
+  }
+
+  function todaysKind(dow) {
+    // dow: 0=Sun..6=Sat
+    if (dow === 1 || dow === 3 || dow === 5) return "voice";
+    if (dow === 2 || dow === 4) return "gliglish";
+    return "voice"; // Sat/Sun free day still shown as voice-style optional prompt
+  }
+
+  function pickTodaysPrompt() {
+    if (!PROMPTS_OK) return null;
+    var phase = phaseOfDate(today);
+    var dow = today.getDay();
+    var kind = todaysKind(dow);
+    var subset;
+    try {
+      subset = PROMPTS.filter(function (p) { return p && p.phase === phase && p.kind === kind; });
+    } catch (e) {
+      showFatal("prompts.js missing or broken — error al filtrar las frases.");
+      return null;
+    }
+    if (subset.length === 0) {
+      showFatal("No hay frases (\"prompts\") para la Fase " + phase + " / tipo \"" + kind + "\" — revisa prompts.js.");
+      return null;
+    }
+    // stable deterministic sort
+    var indexed = subset.map(function (p, i) { return { p: p, i: i }; });
+    indexed.sort(function (a, b) {
+      if (a.p.es < b.p.es) return -1;
+      if (a.p.es > b.p.es) return 1;
+      return a.i - b.i;
+    });
+    var sorted = indexed.map(function (x) { return x.p; });
+    var dateStr = isoDate(today);
+    var offset = getOffset(dateStr);
+    var idx = ((daysSinceEpoch(today) + offset) % sorted.length + sorted.length) % sorted.length;
+    return { prompt: sorted[idx], kind: kind, dateStr: dateStr };
+  }
+
+  /* ============================================================
+     5. WEEK / TASK LOGIC
+     ============================================================ */
+  function dayEntry(dateStr) {
+    return DATA.days[dateStr] || { min: 0, tasks: [], kind: null };
+  }
+  function setDayEntry(dateStr, entry) {
+    if (entry.min <= 0 && entry.tasks.length === 0) {
+      delete DATA.days[dateStr];
+    } else {
+      DATA.days[dateStr] = entry;
+    }
+    saveData(DATA);
+  }
+
+  function weekTotalMinutes(weekIdx) {
+    var monday = addDays(WEEK0_MONDAY, weekIdx * 7);
+    var span = (weekIdx === TOTAL_WEEKS - 1) ? daysBetween(monday, END_DATE) + 1 : 7;
+    var total = 0;
+    for (var i = 0; i < span; i++) {
+      var d = isoDate(addDays(monday, i));
+      var e = DATA.days[d];
+      if (e) total += (e.min || 0);
+    }
+    return total;
+  }
+
+  /* ============================================================
+     6. RENDER: MAIN
+     ============================================================ */
+  var mainEl = document.getElementById("mainContent");
+
+  function render() {
+    if (today < atMidnight(START_DATE)) { renderCountdown(); return; }
+    if (today > atMidnight(END_DATE)) { renderCompleted(); return; }
+    renderNormal();
+  }
+
+  function renderCountdown() {
+    var daysLeft = daysBetween(today, START_DATE);
+    mainEl.innerHTML =
+      '<div class="state-screen card">' +
+      '<p>Tu camino a Madrid empieza pronto.</p>' +
+      '<div class="big">' + daysLeft + '</div>' +
+      '<p>día' + (daysLeft === 1 ? "" : "s") + ' para empezar (17 jul 2026)</p>' +
+      '</div>';
+  }
+
+  function renderCompleted() {
+    mainEl.innerHTML =
+      '<div class="state-screen card">' +
+      '<div class="big">🎉 ¡Ya estás en Madrid!</div>' +
+      '<p>Programa de 24 semanas completado. Enhorabuena.</p>' +
+      '</div>' +
+      '<div class="card" id="heroCard"></div>' +
+      '<div class="card" id="heatmapCard"></div>';
+    renderHero(document.getElementById("heroCard"));
+    renderHeatmap(document.getElementById("heatmapCard"));
+  }
+
+  function renderNormal() {
+    mainEl.innerHTML =
+      '<div class="card" id="heroCard"></div>' +
+      '<div class="card" id="todayCard"></div>' +
+      '<div class="card" id="meterCard"></div>' +
+      '<div class="card" id="heatmapCard"></div>';
+    renderHero(document.getElementById("heroCard"));
+    renderToday(document.getElementById("todayCard"));
+    renderMeter(document.getElementById("meterCard"));
+    renderHeatmap(document.getElementById("heatmapCard"));
+  }
+
+  /* ---------- 6a. Metro hero ---------- */
+  function renderHero(container) {
+    var curWeek = weekIndexOf(today);
+    var stationsHtml = "";
+    for (var i = 0; i < TOTAL_WEEKS; i++) {
+      var ph = weekPhase(i);
+      var isInterchange = (i > 0 && weekPhase(i - 1) !== ph);
+      var isCurrent = (i === curWeek);
+      var isFuture = (i > curWeek);
+      var isTerminus = (i === TOTAL_WEEKS - 1);
+      var cls = ["station"];
+      if (isInterchange) cls.push("interchange");
+      if (isCurrent) cls.push("current");
+      if (isFuture) cls.push("future");
+      if (isTerminus) cls.push("terminus");
+      var color = "var(--phase" + ph + ")";
+      stationsHtml +=
+        '<div class="' + cls.join(" ") + '" style="color:' + color + '" ' +
+        'title="Semana ' + (i + 1) + " · Fase " + ph + '">' +
+        '<div class="dot" style="background:' + color + '"></div>' +
+        '<div class="wk-num">' + (isTerminus ? "MADRID" : (i + 1)) + '</div>' +
+        '</div>';
+    }
+    container.innerHTML =
+      '<div class="metro-scroll" id="metroScroll">' +
+      '<div class="metro-line">' + stationsHtml + '</div>' +
+      '</div>' +
+      '<p class="metro-caption">Semana ' + (curWeek + 1) + ' de ' + TOTAL_WEEKS + ' · Fase ' +
+        phaseOfDate(today) + ': ' + PHASE_NAMES[phaseOfDate(today)] + '</p>' +
+      '<div class="phase-legend">' +
+        '<span class="item"><span class="swatch" style="background:var(--phase1)"></span>Fase 1 · Reboot</span>' +
+        '<span class="item"><span class="swatch" style="background:var(--phase2)"></span>Fase 2 · Expansión</span>' +
+        '<span class="item"><span class="swatch" style="background:var(--phase3)"></span>Fase 3 · Simulación Madrid</span>' +
+      '</div>';
+    // auto-center current station
+    requestAnimationFrame(function () {
+      var scroll = document.getElementById("metroScroll");
+      var current = scroll.querySelector(".station.current");
+      if (current && current.scrollIntoView) {
+        current.scrollIntoView({ inline: "center", block: "nearest" });
+      }
+    });
+  }
+
+  /* ---------- 6b. Today card ---------- */
+  var TASK_MIN = { speak: 8, anki: 5, minimo: 3 };
+
+  function renderToday(container) {
+    var dow = today.getDay();
+    var dateStr = isoDate(today);
+    var entry = dayEntry(dateStr);
+    var kind = todaysKind(dow);
+    var isWeekend = (dow === 0 || dow === 6);
+
+    var kindLabel, kindColorVar;
+    if (isWeekend) {
+      kindLabel = "Día libre / recuperación";
+      kindColorVar = "var(--text-muted)";
+    } else if (kind === "gliglish") {
+      kindLabel = "8′ roleplay — Gliglish";
+      kindColorVar = "var(--phase2)";
+    } else {
+      kindLabel = "8′ conversación — Claude voz";
+      kindColorVar = "var(--phase1)";
+    }
+
+    var promptBlock = "";
+    var picked = pickTodaysPrompt();
+    if (picked) {
+      promptBlock =
+        '<div class="prompt-row">' +
+          '<div>' +
+            '<p class="prompt-es">' + escapeHtml(picked.prompt.es) + '</p>' +
+            '<p class="prompt-en">' + escapeHtml(picked.prompt.en) + '</p>' +
+          '</div>' +
+          '<button class="otro-link" id="otroBtn">otro →</button>' +
+        '</div>';
+      if (kind === "gliglish" && !isWeekend) {
+        promptBlock += '<a class="gliglish-link" href="https://gliglish.com" target="_blank" rel="noopener">' +
+          'Abrir Gliglish → elige "Spanish (Spain)"</a>';
+      }
+    }
+
+    var speakDone = entry.tasks.indexOf("speak") > -1;
+    var ankiDone = entry.tasks.indexOf("anki") > -1;
+    var minimoDone = entry.tasks.indexOf("minimo") > -1;
+
+    var weekIdx = weekIndexOf(today);
+    var weekendHint = "";
+    if (isWeekend) {
+      var total = weekTotalMinutes(weekIdx);
+      if (total < 60) {
+        weekendHint = '<p class="weekend-hint">Te faltan ' + (60 - total) + '′ para el mínimo semanal.</p>';
+      }
+    }
+
+    container.innerHTML =
+      '<span class="today-kind" style="background:' + kindColorVar + ';color:#fff;opacity:0.92">' +
+        escapeHtml(kindLabel) + '</span>' +
+      promptBlock +
+      '<div class="task-row' + (speakDone ? " done" : "") + '" id="taskSpeak" role="button" tabindex="0">' +
+        '<span class="task-check">' + (speakDone ? "✓" : "") + '</span>' +
+        '<span class="task-label">Hablar 8′<small>conversación de hoy</small></span>' +
+      '</div>' +
+      '<div class="task-row' + (ankiDone ? " done" : "") + '" id="taskAnki" role="button" tabindex="0">' +
+        '<span class="task-check">' + (ankiDone ? "✓" : "") + '</span>' +
+        '<span class="task-label">Anki 5′<small>repaso de tarjetas</small></span>' +
+      '</div>' +
+      '<div class="task-row' + (minimoDone ? " done" : "") + '" id="taskMinimo" role="button" tabindex="0">' +
+        '<span class="task-check">' + (minimoDone ? "✓" : "") + '</span>' +
+        '<span class="task-label">Día mínimo viable 3′<small>5 tarjetas + 1 intercambio de voz</small></span>' +
+      '</div>' +
+      '<div class="stepper">' +
+        '<button id="stepDown" aria-label="Restar 1 minuto">−</button>' +
+        '<div class="today-total"><span id="todayTotalVal">' + entry.min + '′</span><small>hoy</small></div>' +
+        '<button id="stepUp" aria-label="Sumar 1 minuto">+</button>' +
+      '</div>' +
+      weekendHint;
+
+    if (picked) {
+      document.getElementById("otroBtn").addEventListener("click", function () {
+        bumpOffset(dateStr);
+        renderToday(container);
+      });
+    }
+
+    function toggleTask(taskName) {
+      var e = dayEntry(dateStr);
+      e.tasks = e.tasks || [];
+      e.kind = kind;
+      if (taskName === "minimo") {
+        // mutually exclusive with speak/anki
+        var wasOn = e.tasks.indexOf("minimo") > -1;
+        var removedMin = 0;
+        ["speak", "anki"].forEach(function (t) {
+          if (e.tasks.indexOf(t) > -1) removedMin += TASK_MIN[t];
+        });
+        e.tasks = e.tasks.filter(function (t) { return t !== "speak" && t !== "anki"; });
+        e.min -= removedMin;
+        if (wasOn) {
+          e.tasks = e.tasks.filter(function (t) { return t !== "minimo"; });
+          e.min -= TASK_MIN.minimo;
+        } else {
+          e.tasks.push("minimo");
+          e.min += TASK_MIN.minimo;
+        }
+      } else {
+        var idx = e.tasks.indexOf(taskName);
+        // toggling speak/anki clears minimo (mutual exclusion)
+        if (e.tasks.indexOf("minimo") > -1) {
+          e.tasks = e.tasks.filter(function (t) { return t !== "minimo"; });
+          e.min -= TASK_MIN.minimo;
+        }
+        if (idx > -1) {
+          e.tasks.splice(idx, 1);
+          e.min -= TASK_MIN[taskName];
+        } else {
+          e.tasks.push(taskName);
+          e.min += TASK_MIN[taskName];
+        }
+      }
+      if (e.min < 0) e.min = 0;
+      setDayEntry(dateStr, e);
+      renderToday(container);
+      renderMeter(document.getElementById("meterCard"));
+      renderHeatmap(document.getElementById("heatmapCard"));
+    }
+
+    ["taskSpeak", "taskAnki", "taskMinimo"].forEach(function (id) {
+      var el = document.getElementById(id);
+      var name = id === "taskSpeak" ? "speak" : id === "taskAnki" ? "anki" : "minimo";
+      el.addEventListener("click", function () { toggleTask(name); });
+      el.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); toggleTask(name); }
+      });
+    });
+
+    document.getElementById("stepUp").addEventListener("click", function () {
+      var e = dayEntry(dateStr);
+      e.min = (e.min || 0) + 1;
+      setDayEntry(dateStr, e);
+      document.getElementById("todayTotalVal").textContent = e.min + "′";
+      renderMeter(document.getElementById("meterCard"));
+      renderHeatmap(document.getElementById("heatmapCard"));
+    });
+    document.getElementById("stepDown").addEventListener("click", function () {
+      var e = dayEntry(dateStr);
+      e.min = Math.max(0, (e.min || 0) - 1);
+      setDayEntry(dateStr, e);
+      document.getElementById("todayTotalVal").textContent = e.min + "′";
+      renderMeter(document.getElementById("meterCard"));
+      renderHeatmap(document.getElementById("heatmapCard"));
+    });
+  }
+
+  /* ---------- 6c. Weekly meter ---------- */
+  function renderMeter(container) {
+    var weekIdx = weekIndexOf(today);
+    var total = weekTotalMinutes(weekIdx);
+    var MAX = 90, FLOOR = 60;
+    var pct = Math.min(100, (total / MAX) * 100);
+    var tickPct = (FLOOR / MAX) * 100;
+    var fillClass = total >= 90 ? "gold" : total >= 60 ? "good" : "";
+    container.innerHTML =
+      '<h2>Meta semanal</h2>' +
+      '<div class="meter-total">Esta semana: ' + total + '′</div>' +
+      '<div class="meter-track" role="progressbar" aria-valuemin="0" aria-valuemax="' + MAX +
+        '" aria-valuenow="' + total + '" aria-label="Minutos practicados esta semana">' +
+        '<div class="meter-fill ' + fillClass + '" style="width:' + pct + '%"></div>' +
+        '<div class="meter-tick" style="left:' + tickPct + '%"></div>' +
+      '</div>' +
+      '<div class="meter-labels"><span>0′</span><span>60′ mínimo</span><span>90′ meta</span></div>';
+  }
+
+  /* ---------- 6d. Heatmap ---------- */
+  function minutesLevel(min) {
+    if (!min || min <= 0) return 0;
+    if (min <= 7) return 1;
+    if (min <= 14) return 2;
+    return 3;
+  }
+  function renderHeatmap(container) {
+    var cols = "";
+    var curWeek = weekIndexOf(today);
+    for (var w = 0; w < TOTAL_WEEKS; w++) {
+      var monday = addDays(WEEK0_MONDAY, w * 7);
+      var isPhaseEdge = (w > 0 && weekPhase(w - 1) !== weekPhase(w));
+      var colCells = "";
+      for (var d = 0; d < 7; d++) {
+        var date = addDays(monday, d);
+        var dateStr = isoDate(date);
+        var isFuture = date > today;
+        var isOutOfRange = date < START_DATE || date > END_DATE;
+        var min = 0;
+        var e = DATA.days[dateStr];
+        if (e) min = e.min || 0;
+        var lvl = minutesLevel(min);
+        var cls = ["heat-cell"];
+        if (lvl > 0) cls.push("lvl" + lvl);
+        if (isFuture || isOutOfRange) cls.push("future");
+        var label = date.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
+        colCells += '<button class="' + cls.join(" ") + '" data-date="' + dateStr + '" data-min="' + min +
+          '" aria-label="' + escapeHtml(label) + ", " + min + ' minutos"' +
+          (isFuture || isOutOfRange ? " disabled" : "") + '></button>';
+      }
+      var colCls = "heatmap-col" + (isPhaseEdge ? " phase-edge" : "");
+      cols += '<div class="' + colCls + '">' + colCells + '</div>';
+    }
+    container.innerHTML =
+      '<h2>Histórico</h2>' +
+      '<div class="heatmap-scroll"><div class="heatmap-grid" id="heatGrid">' + cols + '</div></div>' +
+      '<div class="heatmap-legend">Menos ' +
+        '<span class="heat-cell"></span><span class="heat-cell lvl1"></span>' +
+        '<span class="heat-cell lvl2"></span><span class="heat-cell lvl3"></span> Más' +
+      '</div>' +
+      '<p class="heat-detail" id="heatDetail" aria-live="polite">Toca un día para ver el detalle.</p>';
+
+    document.getElementById("heatGrid").querySelectorAll(".heat-cell").forEach(function (cell) {
+      cell.addEventListener("click", function () {
+        var dateStr = cell.getAttribute("data-date");
+        var min = cell.getAttribute("data-min");
+        var d = new Date(dateStr + "T00:00:00");
+        var label = d.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
+        document.getElementById("heatDetail").textContent = label + " · " + min + "′";
+      });
+    });
+    requestAnimationFrame(function () {
+      var scroll = container.querySelector(".heatmap-scroll");
+      var targetCol = scroll.querySelectorAll(".heatmap-col")[curWeek];
+      if (targetCol && targetCol.scrollIntoView) {
+        targetCol.scrollIntoView({ inline: "center", block: "nearest" });
+      }
+    });
+  }
+
+  /* ============================================================
+     7. SYNC (GitHub contents API)
+     ============================================================ */
+  var SYNC_PATH = "data/stats.json";
+  var lastKnownSha = null;
+  var syncTimer = null;
+
+  function apiBase(owner, repo) {
+    return "https://api.github.com/repos/" + owner + "/" + repo + "/contents/" + SYNC_PATH;
+  }
+
+  function b64EncodeUnicode(str) {
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+  function b64DecodeUnicode(str) {
+    return decodeURIComponent(escape(atob(str)));
+  }
+
+  function mergeData(remote, local) {
+    var merged = { version: 1, updated: new Date().toISOString(), days: {} };
+    var allDates = {};
+    Object.keys((remote && remote.days) || {}).forEach(function (k) { allDates[k] = true; });
+    Object.keys((local && local.days) || {}).forEach(function (k) { allDates[k] = true; });
+    Object.keys(allDates).forEach(function (dateStr) {
+      var r = remote && remote.days && remote.days[dateStr];
+      var l = local && local.days && local.days[dateStr];
+      if (r && l) merged.days[dateStr] = (r.min || 0) >= (l.min || 0) ? r : l;
+      else merged.days[dateStr] = r || l;
+    });
+    return merged;
+  }
+  function dataEquals(a, b) {
+    return JSON.stringify(a.days) === JSON.stringify(b.days);
+  }
+
+  function syncPull(showStatus) {
+    var pat = getPAT();
+    if (!pat) { renderBanners(); return Promise.resolve(); }
+    var or = detectOwnerRepo();
+    if (!or.owner || !or.repo) {
+      setRedBanner("owner/repo no configurados. Añádelos en ajustes.");
+      return Promise.resolve();
+    }
+    return fetch(apiBase(or.owner, or.repo), {
+      headers: {
+        "Accept": "application/vnd.github+json",
+        "Authorization": "Bearer " + pat
+      }
+    }).then(function (resp) {
+      if (resp.status === 404) {
+        // file doesn't exist yet — nothing to merge, will be created on first push
+        lastKnownSha = null;
+        clearRedBanner();
+        if (showStatus) setSyncStatus("No existe data/stats.json todavía — se creará al guardar.");
+        return;
+      }
+      if (!resp.ok) {
+        return resp.text().then(function (t) {
+          throw new Error(resp.status + " " + resp.statusText + " — " + t.slice(0, 200));
+        });
+      }
+      return resp.json().then(function (json) {
+        lastKnownSha = json.sha;
+        var remote;
+        try { remote = JSON.parse(b64DecodeUnicode(json.content.replace(/\n/g, ""))); }
+        catch (e) { throw new Error("No se pudo leer data/stats.json (JSON inválido)."); }
+        var merged = mergeData(remote, DATA);
+        var changed = !dataEquals(merged, DATA) || !dataEquals(merged, remote);
+        DATA = merged;
+        localStorage.setItem(DATA_KEY, JSON.stringify(DATA));
+        clearRedBanner();
+        render();
+        if (!dataEquals(merged, remote)) {
+          return syncPush(showStatus);
+        } else if (showStatus) {
+          setSyncStatus("Sincronizado correctamente. (" + Object.keys(DATA.days).length + " días)");
+        }
+      });
+    }).catch(function (err) {
+      setRedBanner(err.message || String(err));
+      if (showStatus) setSyncStatus("Error: " + (err.message || String(err)));
+    });
+  }
+
+  function syncPush(showStatus) {
+    var pat = getPAT();
+    if (!pat) return Promise.resolve();
+    var or = detectOwnerRepo();
+    if (!or.owner || !or.repo) {
+      setRedBanner("owner/repo no configurados. Añádelos en ajustes.");
+      return Promise.resolve();
+    }
+    var body = {
+      message: "sync stats",
+      content: b64EncodeUnicode(JSON.stringify(DATA, null, 2))
+    };
+    if (lastKnownSha) body.sha = lastKnownSha;
+    return fetch(apiBase(or.owner, or.repo), {
+      method: "PUT",
+      headers: {
+        "Accept": "application/vnd.github+json",
+        "Authorization": "Bearer " + pat,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }).then(function (resp) {
+      if (!resp.ok) {
+        return resp.text().then(function (t) {
+          throw new Error(resp.status + " " + resp.statusText + " — " + t.slice(0, 200));
+        });
+      }
+      return resp.json().then(function (json) {
+        if (json.content && json.content.sha) lastKnownSha = json.content.sha;
+        clearRedBanner();
+        if (showStatus) setSyncStatus("Guardado en GitHub correctamente.");
+      });
+    }).catch(function (err) {
+      setRedBanner(err.message || String(err));
+      if (showStatus) setSyncStatus("Error: " + (err.message || String(err)));
+    });
+  }
+
+  function scheduleSync() {
+    if (!getPAT()) return;
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(function () { syncPush(false); }, 2000);
+  }
+
+  function setSyncStatus(msg) {
+    var el = document.getElementById("syncStatus");
+    if (el) el.textContent = msg;
+  }
+
+  /* ============================================================
+     8. SETTINGS DRAWER
+     ============================================================ */
+  var drawer = document.getElementById("drawer");
+  var overlay = document.getElementById("drawerOverlay");
+
+  function openDrawer() {
+    document.getElementById("patInput").value = getPAT();
+    document.getElementById("ownerInput").value = SETTINGS.owner || "";
+    document.getElementById("repoInput").value = SETTINGS.repo || "";
+    setSyncStatus("");
+    drawer.classList.add("open");
+    overlay.classList.add("open");
+    drawer.setAttribute("aria-hidden", "false");
+  }
+  function closeDrawer() {
+    drawer.classList.remove("open");
+    overlay.classList.remove("open");
+    drawer.setAttribute("aria-hidden", "true");
+  }
+  document.getElementById("settingsBtn").addEventListener("click", openDrawer);
+  document.getElementById("drawerClose").addEventListener("click", closeDrawer);
+  overlay.addEventListener("click", closeDrawer);
+
+  document.getElementById("saveSettingsBtn").addEventListener("click", function () {
+    setPAT(document.getElementById("patInput").value.trim());
+    SETTINGS.owner = document.getElementById("ownerInput").value.trim();
+    SETTINGS.repo = document.getElementById("repoInput").value.trim();
+    saveSettings(SETTINGS);
+    renderBanners();
+    setSyncStatus("Ajustes guardados.");
+    syncPull(true);
+  });
+
+  document.getElementById("testSyncBtn").addEventListener("click", function () {
+    setSyncStatus("Probando…");
+    syncPull(true);
+  });
+
+  document.getElementById("exportBtn").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(DATA, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "camino-stats-" + isoDate(today) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("importInput").addEventListener("change", function (ev) {
+    var file = ev.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var imported = JSON.parse(reader.result);
+        DATA = mergeData(imported, DATA);
+        localStorage.setItem(DATA_KEY, JSON.stringify(DATA));
+        setSyncStatus("Importado y fusionado (" + Object.keys(DATA.days).length + " días).");
+        render();
+        scheduleSync();
+      } catch (e) {
+        setSyncStatus("Error al importar: JSON inválido.");
+      }
+    };
+    reader.readAsText(file);
+    ev.target.value = "";
+  });
+
+  /* ============================================================
+     9. INIT
+     ============================================================ */
+  renderBanners();
+  render();
+  if (getPAT()) syncPull(false);
+
+})();
+</script>
+</body>
+</html>

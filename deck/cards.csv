@@ -1,0 +1,91 @@
+front,back,extra,tags
+"hacer — vosotros, presente","hacéis","¿Qué hacéis este finde? (What are you all doing this weekend?)",phase1 vosotros
+"ser — vosotros, presente","sois","Vosotros sois los nuevos del piso, ¿no? (You're the new ones in the flat, right?)",phase1 vosotros
+"estar — vosotros, presente","estáis","¿Dónde estáis? Os espero en la puerta. (Where are you? I'm waiting for you at the door.)",phase1 vosotros
+"ir — vosotros, presente","vais","¿Vais a venir a la cena o no? (Are you all coming to dinner or not?)",phase1 vosotros
+"tener — vosotros, presente","tenéis","¿Tenéis hora para el médico? (Do you have an appointment for the doctor?)",phase1 vosotros
+"poder — vosotros, presente","podéis","Si queréis, podéis quedaros a dormir. (If you want, you can stay over.)",phase1 vosotros
+"querer — vosotros, presente","queréis","¿Qué queréis tomar? (What do you all want to drink?)",phase1 vosotros
+"venir — vosotros, presente","venís","¿A qué hora venís mañana? (What time are you coming tomorrow?)",phase1 vosotros
+"decir — vosotros, presente","decís","Siempre decís lo mismo. (You always say the same thing.)",phase1 vosotros
+"hablar — vosotros, pretérito indefinido","hablasteis","¿Hablasteis con el casero al final? (Did you talk to the landlord in the end?)",phase1 vosotros
+"comer — vosotros, pretérito indefinido","comisteis","¿Dónde comisteis ayer? (Where did you eat yesterday?)",phase1 vosotros
+"ir — vosotros, pretérito indefinido","fuisteis","¿Adónde fuisteis de vacaciones? (Where did you go on holiday?)",phase1 vosotros
+"hacer — vosotros, pretérito indefinido","hicisteis","¿Qué hicisteis en el puente? (What did you do over the long weekend?)",phase1 vosotros
+"vivir — vosotros, imperfecto","vivíais","Cuando vivíais en Lavapiés, ¿pagabais mucho? (When you lived in Lavapiés, did you pay a lot?)",phase1 vosotros
+"jugar — vosotros, imperfecto","jugabais","De pequeños jugabais siempre en la calle, ¿no? (As kids you always played in the street, right?)",phase1 vosotros
+"salir — vosotros, futuro","saldréis","¿A qué hora saldréis del curro? (What time will you leave work?)",phase1 vosotros
+"tener — vosotros, futuro","tendréis","Con ese piso tendréis sitio de sobra. (With that flat you'll have plenty of room.)",phase1 vosotros
+"poder — vosotros, condicional","podríais","¿Podríais bajar un poco la música? (Could you turn the music down a bit?)",phase1 vosotros
+"decir — vosotros, presente de subjuntivo","digáis","No quiero que digáis nada todavía. (I don't want you to say anything yet.)",phase1 vosotros
+"venir — vosotros, presente de subjuntivo","vengáis","Espero que vengáis a la fiesta. (I hope you all come to the party.)",phase1 vosotros
+"hacer — vosotros, imperativo afirmativo","haced","Haced los deberes antes de salir. (Do your homework before going out.)",phase1 vosotros
+"decir — vosotros, imperativo negativo","no digáis","No digáis tonterías, que os oyen. (Don't talk nonsense, they can hear you.)",phase1 vosotros
+"sentarse — vosotros, imperativo afirmativo","sentaos","Sentaos, que ahora os traigo las cañas. (Sit down, I'll bring you the beers now.)",phase1 vosotros
+"levantarse — vosotros, imperativo afirmativo","levantaos","Venga, levantaos ya, que llegamos tarde. (Come on, get up now, we're going to be late.)",phase1 vosotros
+"hacer — vosotros, pretérito perfecto","habéis hecho","¿Ya habéis hecho la compra? (Have you done the shopping yet?)",phase1 vosotros
+"to realize (something)","darse cuenta de","No me di cuenta de que era tan tarde. (I didn't realize it was so late.)",phase1 vocab
+"to manage to (do something)","conseguir + infinitivo","Al final conseguí encontrar piso cerca del curro. (In the end I managed to find a flat near work.)",phase1 vocab
+"to achieve / pull off","lograr","Logró aprobar todas en junio. (She managed to pass everything in June.)",phase1 vocab
+"to miss (someone/something)","echar de menos","Echo de menos la comida de mi madre. (I miss my mum's cooking.)",phase1 vocab
+"to feel like (doing something)","tener ganas de","Tengo muchas ganas de que llegue el verano. (I really can't wait for summer to arrive.)",phase1 vocab
+"to fancy / feel like (impersonal)","apetecer","¿Te apetece un café? (Do you fancy a coffee?)",phase1 vocab
+"to usually (do something)","soler + infinitivo","Suelo desayunar en el bar de abajo. (I usually have breakfast at the bar downstairs.)",phase1 vocab
+"to arrange to / agree to meet","quedar en","Quedamos en vernos a las ocho. (We agreed to meet at eight.)",phase1 vocab
+"to start (doing something)","ponerse a","Se puso a llover justo al salir. (It started raining just as we left.)",phase1 vocab
+"to stop (doing something)","dejar de","He dejado de tomar tanto café. (I've stopped drinking so much coffee.)",phase1 vocab
+"to have been (doing) for a while","llevar + gerundio","Llevo dos años estudiando ingeniería. (I've been studying engineering for two years.)",phase1 vocab
+"it's necessary / you need","hace falta","Hace falta empadronarse para pedir la cita. (You need to register to ask for the appointment.)",phase1 vocab
+"to be worth it","merecer la pena","Merece la pena madrugar para ver el amanecer. (It's worth getting up early to see the sunrise.)",phase1 vocab
+"in other words (rephrasing)","o sea","Está lloviendo a mares, o sea, no salimos. (It's pouring, in other words, we're not going out.)",phase1 vocab
+"that is to say","es decir","Vienen los de siempre, es decir, Ana y Luis. (The usual lot are coming, that is, Ana and Luis.)",phase1 vocab
+"as soon as","en cuanto","En cuanto llegue a casa te llamo. (As soon as I get home I'll call you.)",phase2 vocab
+"maybe / perhaps","a lo mejor","A lo mejor me paso luego por tu casa. (Maybe I'll drop by your place later.)",phase2 vocab
+"just in case","por si acaso","Coge el paraguas, por si acaso. (Take the umbrella, just in case.)",phase2 vocab
+"I'm not so sure (hedging)","no lo tengo tan claro","Dicen que es fácil, pero no lo tengo tan claro. (They say it's easy, but I'm not so sure.)",phase2 vocab
+"to be right (a person)","tener razón","La verdad es que tienes razón. (The truth is you're right.)",phase2 vocab
+"I don't quite agree (polite)","no acabo de estar de acuerdo","No acabo de estar de acuerdo con eso. (I don't quite agree with that.)",phase2 vocab
+"depending on / it depends","según","Iremos andando o en metro, según el tiempo. (We'll walk or take the metro, depending on the weather.)",phase2 vocab
+"to get (become) + adjective","ponerse + adjetivo","Se puso muy contento con la noticia. (He got really happy with the news.)",phase2 vocab
+"to end up (doing something)","acabar + gerundio","Acabamos yendo a otro bar. (We ended up going to another bar.)",phase2 vocab
+"honestly / to be fair","la verdad es que","La verdad es que no me apetece nada. (Honestly, I don't feel like it at all.)",phase2 vocab
+"OK / all right / got it (colloquial)","vale","Vale, nos vemos allí a las nueve. (OK, see you there at nine.) — coloquial",phase2 slang
+"guy / dude; mate (colloquial)","tío / tía","Tío, no te lo vas a creer. (Dude, you're not going to believe it.) — coloquial",phase2 slang
+"cool / great (colloquial)","guay","El concierto estuvo súper guay. (The concert was really cool.) — coloquial",phase2 slang
+"to love / really like (colloquial)","molar","Me mola un montón tu chaqueta. (I really love your jacket.) — coloquial",phase2 slang
+"to be amazed / freak out (colloquial)","flipar","Flipé cuando vi el precio del piso. (I freaked out when I saw the flat's price.) — coloquial",phase2 slang
+"to work (job) (colloquial)","currar","Curro de lunes a viernes en una startup. (I work Monday to Friday at a startup.) — coloquial",phase2 slang
+"job / work (colloquial)","curro","Hoy no voy al curro, estoy malo. (I'm not going to work today, I'm ill.) — coloquial",phase2 slang
+"to meet up with someone (colloquial)","quedar con alguien","He quedado con unos amigos en Malasaña. (I'm meeting up with some friends in Malasaña.) — coloquial",phase2 slang
+"to get into a mess / hook up (colloquial)","liarse","Me lié con el papeleo y no llegué. (I got tangled up with the paperwork and didn't make it.) — coloquial",phase2 slang
+"to catch / grab / get (colloquial)","pillar","¿Me pillas una caña de paso? (Grab me a beer on your way, will you?) — coloquial",phase2 slang
+"nice / friendly (person) (colloquial)","majo / maja","El casero es un tío muy majo. (The landlord is a really nice guy.) — coloquial",phase2 slang
+"shabby / cheap / crappy (colloquial)","cutre","El bar es un poco cutre, pero está bien de precio. (The bar's a bit shabby, but it's cheap.) — coloquial",phase2 slang
+"hangover (colloquial)","resaca","Menuda resaca tengo hoy. (What a hangover I've got today.) — coloquial",phase2 slang
+"outdoor street drinking party (colloquial)","botellón","Los jueves hay botellón en el parque. (On Thursdays there's a botellón in the park.) — coloquial",phase2 slang
+"long weekend / bridge day (colloquial)","puente","Aprovechamos el puente para ir a la sierra. (We used the long weekend to go to the mountains.) — coloquial",phase2 slang
+"I don't care / whatever (colloquial)","me da igual","¿Pizza o sushi? Me da igual. (Pizza or sushi? I don't mind.) — coloquial",phase2 slang
+"OMG / how crazy (colloquial)","qué fuerte","¿Que te han subido el alquiler otra vez? ¡Qué fuerte! (They raised your rent again? That's insane!) — coloquial",phase2 slang
+"come on / let's go / all right (colloquial)","venga","Venga, que llegamos tarde. (Come on, we're going to be late.) — coloquial",phase2 slang
+"like / sort of (filler) (colloquial)","en plan","Fuimos en plan tranquilo, sin prisa. (We went sort of chill, no rush.) — coloquial",phase2 slang
+"money / cash (colloquial)","pasta","No me queda pasta hasta fin de mes. (I've got no cash left until the end of the month.) — coloquial",phase2 slang
+"to sign up / join in (colloquial)","apuntarse","¿Vamos de cañas? Yo me apunto. (Shall we go for beers? I'm in.) — coloquial",phase2 slang
+"afternoon going-out (colloquial)","tardeo","El domingo nos vamos de tardeo. (On Sunday we're going out in the afternoon.) — coloquial",phase2 slang
+"no way / not a chance (colloquial)","ni de coña","¿Pagar 900 por eso? Ni de coña. (Pay 900 for that? No chance.) — coloquial",phase2 slang
+"it's the best / awesome (colloquial)","ser la leche","Este sitio es la leche, en serio. (This place is amazing, seriously.) — coloquial",phase2 slang
+"to be exhausted / wiped out (colloquial)","estar hecho polvo","Llevo doble turno, estoy hecho polvo. (I've done a double shift, I'm wiped out.) — coloquial",phase2 slang
+"NIE (foreigner ID number)","el NIE (Número de Identidad de Extranjero)","Es tu número de extranjero; lo necesitas para casi todo: contrato, banco, alquiler. (It's your foreigner number; you need it for almost everything.)",phase3 madrid
+"TIE (foreigner ID card)","la TIE (Tarjeta de Identidad de Extranjero)","Es la tarjeta física con tu NIE y tu foto; se pide con cita en extranjería. (It's the physical card with your NIE and photo; you request it with an appointment.)",phase3 madrid
+"to register at the town hall","empadronarse / el empadronamiento (padrón)","Es apuntarte en tu ayuntamiento como residente; te dan el certificado de empadronamiento. (You register at your town hall as a resident; they give you the registration certificate.)",phase3 madrid
+"prior appointment (booked slot)","la cita previa","Para casi cualquier trámite oficial hay que pedir cita previa por internet. (For almost any official procedure you have to book an appointment online.)",phase3 madrid
+"public transport pass (+ under-26 youth pass)","el abono transporte / el abono joven","Con el abono pagas al mes y usas metro, bus y cercanías sin límite; si tienes menos de 26, el abono joven es baratísimo. (With the pass you pay monthly for unlimited metro, bus and trains; under 26, the youth pass is very cheap.)",phase3 madrid
+"rental deposit","la fianza","Es el dinero que dejas al entrar y te devuelven al irte si todo está bien. (It's the money you leave when moving in, returned when you leave if all's well.)",phase3 madrid
+"guarantor / financial guarantee","el aval","Es una garantía de que podrás pagar; a veces el casero te lo pide. (It's a guarantee you can pay; sometimes the landlord asks you for it.)",phase3 madrid
+"flatmate / roommate","el compañero de piso","Es la persona con la que compartes piso y gastos. (It's the person you share the flat and expenses with.)",phase3 madrid
+"landlord / landlady","el casero / la casera","Es el dueño del piso que te lo alquila. (It's the owner of the flat who rents it to you.)",phase3 madrid
+"building community fees","los gastos de comunidad","Cubren la limpieza, el ascensor y el portal; a veces van aparte del alquiler. (They cover cleaning, the lift and the entrance; sometimes separate from rent.)",phase3 madrid
+"to set up utilities (in your name)","dar(se) de alta (luz, agua, internet)","Es contratar y activar un servicio a tu nombre al mudarte. (It's signing up and activating a service in your name when you move in.)",phase3 madrid
+"public health card","la tarjeta sanitaria","Te da acceso al médico público; se pide en el centro de salud de tu zona. (It gives you access to the public doctor; requested at your local health centre.)",phase3 madrid
+"payslip / proof of salary","la nómina","Es tu justificante de sueldo; los caseros suelen pedirla para alquilar. (It's your salary proof; landlords usually ask for it to rent.)",phase3 madrid
+"small beer / to go for beers","la caña / el doble / ir de cañas","Una caña es una cerveza pequeña y un doble es más grande; ir de cañas es salir a tomarlas. (A caña is a small beer, a doble is bigger; ir de cañas means going out for them.)",phase3 madrid
+"set lunch menu (fixed price)","el menú del día","Es un menú de mediodía con primero, segundo, bebida y postre a precio fijo. (It's a midday menu with starter, main, drink and dessert at a fixed price.)",phase3 madrid
