@@ -315,10 +315,6 @@
     font-size: 0.82rem; cursor: pointer; white-space: nowrap; padding: 6px 2px;
     min-height: var(--tap); display:flex; align-items:center;
   }
-  .gliglish-link {
-    display: inline-block; margin-top: 8px; font-size: 0.85rem;
-    text-decoration: none; font-weight: 600;
-  }
 
   .task-row {
     display: flex;
@@ -353,6 +349,17 @@
   }
   .task-label { flex: 1; font-size: 0.92rem; }
   .task-label small { display:block; color: var(--text-muted); font-size: 0.72rem; }
+  .task-open {
+    flex: 0 0 auto; font-size: 0.82rem; font-weight: 600;
+    text-decoration: none; white-space: nowrap;
+    min-height: var(--tap); display: flex; align-items: center; padding: 0 4px;
+  }
+  .minimo-link {
+    display: block; width: 100%; margin-top: 12px; text-align: center;
+    background: none; border: none; cursor: pointer; font: inherit;
+    font-size: 0.8rem; color: var(--text-muted); min-height: var(--tap);
+  }
+  .minimo-link.done { color: var(--status-good); font-weight: 600; }
 
   .stepper {
     display: flex;
@@ -959,20 +966,22 @@
           '</div>' +
           '<button class="otro-link" id="otroBtn">otro →</button>' +
         '</div>';
-      if (kind === "gliglish" && !isWeekend) {
-        promptBlock += '<a class="gliglish-link" href="https://gliglish.com" target="_blank" rel="noopener">' +
-          'Abrir Gliglish → elige "Spanish (Spain)"</a>';
-      } else {
-        // One-tap start: open Claude with the conversation pre-loaded; the
-        // user only has to tap the voice icon once it opens.
-        var claudeQ = "Practiquemos español hablado (castellano peninsular, nivel B1+). " +
-          "Conversa conmigo sobre este tema, hazme preguntas de seguimiento, " +
-          "corrige brevemente solo mis errores importantes y usa vosotros cuando sea natural. " +
-          "Tema: " + picked.prompt.es + " Empieza tú con una primera pregunta.";
-        promptBlock += '<a class="gliglish-link" href="https://claude.ai/new?q=' +
-          encodeURIComponent(claudeQ) + '" target="_blank" rel="noopener">' +
-          'Hablar con Claude → (al abrirse, toca el micro)</a>';
-      }
+    }
+
+    // One-tap launch targets for the task rows. On voice days the link opens
+    // Claude with the conversation pre-loaded (user then taps the mic once).
+    var speakHref, speakHint;
+    if (kind === "gliglish" && !isWeekend) {
+      speakHref = "https://gliglish.com";
+      speakHint = 'Gliglish — elige "Spanish (Spain)"';
+    } else {
+      var claudeQ = "Practiquemos español hablado (castellano peninsular, nivel B1+). " +
+        "Conversa conmigo sobre este tema, hazme preguntas de seguimiento, " +
+        "corrige brevemente solo mis errores importantes y usa vosotros cuando sea natural. " +
+        "Tema: " + (picked ? picked.prompt.es : "un tema que elijas tú.") +
+        " Empieza tú con una primera pregunta.";
+      speakHref = "https://claude.ai/new?q=" + encodeURIComponent(claudeQ);
+      speakHint = "Claude voz — al abrirse, toca el micro";
     }
 
     var speakDone = entry.tasks.indexOf("speak") > -1;
@@ -994,21 +1003,22 @@
       promptBlock +
       '<div class="task-row' + (speakDone ? " done" : "") + '" id="taskSpeak" role="button" tabindex="0">' +
         '<span class="task-check">' + (speakDone ? "✓" : "") + '</span>' +
-        '<span class="task-label">Hablar 8′<small>conversación de hoy</small></span>' +
+        '<span class="task-label">Hablar 8′<small>' + escapeHtml(speakHint) + '</small></span>' +
+        '<a class="task-open" href="' + speakHref + '" target="_blank" rel="noopener">abrir →</a>' +
       '</div>' +
       '<div class="task-row' + (ankiDone ? " done" : "") + '" id="taskAnki" role="button" tabindex="0">' +
         '<span class="task-check">' + (ankiDone ? "✓" : "") + '</span>' +
         '<span class="task-label">Anki 5′<small>repaso de tarjetas</small></span>' +
-      '</div>' +
-      '<div class="task-row' + (minimoDone ? " done" : "") + '" id="taskMinimo" role="button" tabindex="0">' +
-        '<span class="task-check">' + (minimoDone ? "✓" : "") + '</span>' +
-        '<span class="task-label">Día mínimo viable 3′<small>5 tarjetas + 1 intercambio de voz</small></span>' +
+        '<a class="task-open" href="https://ankiweb.net/decks" target="_blank" rel="noopener">abrir →</a>' +
       '</div>' +
       '<div class="stepper">' +
         '<button id="stepDown" aria-label="Restar 1 minuto">−</button>' +
         '<div class="today-total"><span id="todayTotalVal">' + entry.min + '′</span><small>hoy</small></div>' +
         '<button id="stepUp" aria-label="Sumar 1 minuto">+</button>' +
       '</div>' +
+      '<button class="minimo-link' + (minimoDone ? " done" : "") + '" id="taskMinimo">' +
+        (minimoDone ? "✓ Día mínimo hecho — 3′" : "¿Sin tiempo? Día mínimo viable — 3′ (5 tarjetas + 1 frase en voz alta)") +
+      '</button>' +
       weekendHint;
 
     if (picked) {
@@ -1067,6 +1077,11 @@
       el.addEventListener("keydown", function (ev) {
         if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); toggleTask(name); }
       });
+    });
+
+    // "abrir →" links open their app without toggling the row
+    container.querySelectorAll(".task-open").forEach(function (a) {
+      a.addEventListener("click", function (ev) { ev.stopPropagation(); });
     });
 
     document.getElementById("stepUp").addEventListener("click", function () {

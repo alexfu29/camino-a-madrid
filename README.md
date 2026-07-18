@@ -26,6 +26,9 @@ full-screen like a native app.
   gives 10 min/day. Choose **"Spanish (Spain)"** as the dialect every time —
   it defaults to Latin American Spanish otherwise.
 - **Every day — 5′ Anki.** Vocab and (in Phase 1) daily `vosotros` drilling.
+  The tracker's "abrir →" link opens [AnkiWeb](https://ankiweb.net/decks) — for
+  it to have your cards, import `madrid_spanish.apkg` into Anki once and enable
+  AnkiWeb sync (free account) in the app.
 - **Minimum viable day (bad-day fallback) — 3′.** 5 flashcards + one voice
   exchange. Counts as a full day. Better than zero.
 - **Sat / Sun — free / catch-up.** Optional. The tracker will gently nudge you
