@@ -371,6 +371,7 @@
     flex: 0 0 auto; font-size: 0.82rem; font-weight: 600;
     text-decoration: none; white-space: nowrap;
     min-height: var(--tap); display: flex; align-items: center; padding: 0 4px;
+    background: none; border: none; color: var(--phase1); font-family: inherit; cursor: pointer;
   }
   .minimo-link {
     display: block; width: 100%; margin-top: 12px; text-align: center;
@@ -547,6 +548,61 @@
   .drawer hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   .drawer .file-import { font-size: 0.82rem; }
 
+  /* ---------- SRS flashcard reviewer overlay ---------- */
+  .srs-overlay {
+    position: fixed; inset: 0; background: var(--surface-1);
+    z-index: 45; display: none; flex-direction: column;
+  }
+  .srs-overlay.open { display: flex; }
+  .srs-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-bottom: 1px solid var(--border); flex: 0 0 auto;
+  }
+  .srs-counter {
+    font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .srs-body {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 24px 18px; text-align: center;
+    overflow-y: auto;
+  }
+  .srs-front { font-size: 1.5rem; font-weight: 600; margin: 0 0 8px; max-width: 480px; }
+  .srs-back { font-size: 1.35rem; font-weight: 600; margin: 20px 0 4px; color: var(--phase1); max-width: 480px; }
+  .srs-extra { font-size: 0.9rem; color: var(--text-muted); margin: 0 0 22px; max-width: 480px; }
+  .srs-show-btn {
+    margin-top: 26px; min-height: var(--tap); padding: 0 30px; border-radius: 999px;
+    border: none; background: var(--phase1); color: var(--phase1-ink);
+    font: inherit; font-weight: 600; font-size: 1rem; cursor: pointer;
+  }
+  .srs-show-btn:active { transform: scale(0.96); }
+  .srs-grades {
+    display: flex; gap: 10px; width: 100%; max-width: 420px; margin-top: 12px;
+  }
+  .srs-grade-btn {
+    flex: 1; min-height: var(--tap); border-radius: 12px; border: 1px solid var(--border);
+    font: inherit; font-weight: 700; font-size: 0.92rem; cursor: pointer; padding: 10px 4px;
+  }
+  .srs-grade-btn:active { transform: scale(0.96); }
+  /* Otra vez: muted red tint, same validated colors as .banner-red */
+  .srs-grade-again { background: #fdeceb; color: #7a1414; border-color: #e0292f; }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .srs-grade-again { background: #3a1616; color: #ff9d9d; border-color: #e66767; }
+  }
+  :root[data-theme="dark"] .srs-grade-again { background: #3a1616; color: #ff9d9d; border-color: #e66767; }
+  /* Bien: primary phase color (same pairing as .drawer button.primary) */
+  .srs-grade-good { background: var(--phase1); color: var(--phase1-ink); border-color: transparent; }
+  /* Fácil: --status-good background; dark ink (not white) for AA contrast —
+     status-good's luminance is too high for white text at this font weight/size. */
+  .srs-grade-easy { background: var(--status-good); color: #0b0b0b; border-color: transparent; }
+  .srs-done .big { font-size: 2.2rem; font-weight: 700; margin: 10px 0; }
+  .srs-done p { color: var(--text-secondary); }
+  .srs-done-close {
+    margin-top: 22px; min-height: var(--tap); padding: 0 32px; border-radius: 999px;
+    border: none; background: var(--phase1); color: var(--phase1-ink);
+    font: inherit; font-weight: 600; font-size: 1rem; cursor: pointer;
+  }
+
   /* ---------- Countdown / completed states ---------- */
   .state-screen {
     text-align: center;
@@ -614,7 +670,16 @@
   </p>
 </div>
 
+<div class="srs-overlay" id="srsOverlay" aria-hidden="true">
+  <div class="srs-top">
+    <span class="srs-counter" id="srsCounter"></span>
+    <button class="icon-btn" id="srsCloseBtn" aria-label="Cerrar repaso">✕</button>
+  </div>
+  <div class="srs-body" id="srsBody"></div>
+</div>
+
 <script src="prompts.js"></script>
+<script src="cards.js"></script>
 <script>
 (function () {
   "use strict";
@@ -622,15 +687,29 @@
   /* ============================================================
      0. FATAL-ERROR HANDLING FOR prompts.js
      ============================================================ */
+  // Deviation (documented): showFatal() now accumulates messages instead of
+  // overwriting, so prompts.js and cards.js can each fail independently and
+  // both loud banners stay visible at once.
+  var fatalMsgs = [];
   function showFatal(msg) {
-    var el = document.getElementById("fatalBanner");
-    el.innerHTML = '<div class="error-banner-fatal">⚠ ' + msg + '</div>';
+    fatalMsgs.push(msg);
+    var html = "";
+    for (var i = 0; i < fatalMsgs.length; i++) {
+      html += '<div class="error-banner-fatal">⚠ ' + fatalMsgs[i] + '</div>';
+    }
+    document.getElementById("fatalBanner").innerHTML = html;
   }
 
   var PROMPTS_OK = true;
   if (typeof PROMPTS === "undefined" || !Array.isArray(PROMPTS) || PROMPTS.length === 0) {
     showFatal("prompts.js missing or broken — no se pudieron cargar las frases de práctica.");
     PROMPTS_OK = false;
+  }
+
+  var CARDS_OK = true;
+  if (typeof CARDS === "undefined" || !Array.isArray(CARDS) || CARDS.length !== 90) {
+    showFatal("cards.js missing or broken — no se pudieron cargar las tarjetas.");
+    CARDS_OK = false;
   }
 
   /* ============================================================
@@ -709,15 +788,23 @@
   var PAT_KEY = "camino-pat";
   var SETTINGS_KEY = "camino-settings";
 
+  function emptyData() {
+    return {
+      version: 1, updated: new Date().toISOString(), days: {},
+      srs: {}, srsNew: { date: null, count: 0 }
+    };
+  }
   function loadData() {
     try {
       var raw = localStorage.getItem(DATA_KEY);
-      if (!raw) return { version: 1, updated: new Date().toISOString(), days: {} };
+      if (!raw) return emptyData();
       var parsed = JSON.parse(raw);
       if (!parsed.days) parsed.days = {};
+      if (!parsed.srs) parsed.srs = {}; // tolerate old data with no SRS state yet
+      if (!parsed.srsNew) parsed.srsNew = { date: null, count: 0 };
       return parsed;
     } catch (e) {
-      return { version: 1, updated: new Date().toISOString(), days: {} };
+      return emptyData();
     }
   }
   function saveData(data) {
@@ -805,7 +892,7 @@
 
   /* Weekly template balancing Nation's four strands in ~15-20'/day:
      output (Mon/Thu/Sat), input at natural speed (Tue), fluency
-     development (Wed 4/3/2, Fri shadowing), daily Anki = study strand. */
+     development (Wed 4/3/2, Fri shadowing), daily flashcards = study strand. */
   var DAY_PLANS = {
     1: { kind: "voice", badge: "8′ conversación — Claude voz", task: "Hablar 8′", min: 8,
          promptKind: "voice", color: "var(--phase1)", href: "claude",
@@ -880,6 +967,48 @@
       DATA.days[dateStr] = entry;
     }
     saveData(DATA);
+  }
+
+  // Shared toggle logic for speak/anki/minimo, used both by the manual task
+  // rows (renderToday) and by the SRS reviewer's auto-mark-done-on-finish
+  // (so both paths get identical mutual-exclusion + minute bookkeeping).
+  function applyTaskToggle(dateStr, kind, taskName) {
+    var e = dayEntry(dateStr);
+    e.tasks = e.tasks || [];
+    e.kind = kind;
+    if (taskName === "minimo") {
+      // mutually exclusive with speak/anki
+      var wasOn = e.tasks.indexOf("minimo") > -1;
+      var removedMin = 0;
+      ["speak", "anki"].forEach(function (t) {
+        if (e.tasks.indexOf(t) > -1) removedMin += TASK_MIN[t];
+      });
+      e.tasks = e.tasks.filter(function (t) { return t !== "speak" && t !== "anki"; });
+      e.min -= removedMin;
+      if (wasOn) {
+        e.tasks = e.tasks.filter(function (t) { return t !== "minimo"; });
+        e.min -= TASK_MIN.minimo;
+      } else {
+        e.tasks.push("minimo");
+        e.min += TASK_MIN.minimo;
+      }
+    } else {
+      var idx = e.tasks.indexOf(taskName);
+      // toggling speak/anki clears minimo (mutual exclusion)
+      if (e.tasks.indexOf("minimo") > -1) {
+        e.tasks = e.tasks.filter(function (t) { return t !== "minimo"; });
+        e.min -= TASK_MIN.minimo;
+      }
+      if (idx > -1) {
+        e.tasks.splice(idx, 1);
+        e.min -= TASK_MIN[taskName];
+      } else {
+        e.tasks.push(taskName);
+        e.min += TASK_MIN[taskName];
+      }
+    }
+    if (e.min < 0) e.min = 0;
+    setDayEntry(dateStr, e);
   }
 
   function weekTotalMinutes(weekIdx) {
@@ -1058,8 +1187,8 @@
       '</div>' +
       '<div class="task-row' + (ankiDone ? " done" : "") + '" id="taskAnki" role="button" tabindex="0">' +
         '<span class="task-check">' + (ankiDone ? "✓" : "") + '</span>' +
-        '<span class="task-label">Anki 5′<small>repaso de tarjetas</small></span>' +
-        '<a class="task-open" href="https://ankiweb.net/decks" target="_blank" rel="noopener">abrir →</a>' +
+        '<span class="task-label">Tarjetas 5′<small>' + escapeHtml(srsHintText()) + '</small></span>' +
+        '<button class="task-open" id="srsOpenBtn" type="button">repasar →</button>' +
       '</div>' +
       '<div class="stepper">' +
         '<button id="stepDown" aria-label="Restar 1 minuto">−</button>' +
@@ -1117,42 +1246,7 @@
     }
 
     function toggleTask(taskName) {
-      var e = dayEntry(dateStr);
-      e.tasks = e.tasks || [];
-      e.kind = kind;
-      if (taskName === "minimo") {
-        // mutually exclusive with speak/anki
-        var wasOn = e.tasks.indexOf("minimo") > -1;
-        var removedMin = 0;
-        ["speak", "anki"].forEach(function (t) {
-          if (e.tasks.indexOf(t) > -1) removedMin += TASK_MIN[t];
-        });
-        e.tasks = e.tasks.filter(function (t) { return t !== "speak" && t !== "anki"; });
-        e.min -= removedMin;
-        if (wasOn) {
-          e.tasks = e.tasks.filter(function (t) { return t !== "minimo"; });
-          e.min -= TASK_MIN.minimo;
-        } else {
-          e.tasks.push("minimo");
-          e.min += TASK_MIN.minimo;
-        }
-      } else {
-        var idx = e.tasks.indexOf(taskName);
-        // toggling speak/anki clears minimo (mutual exclusion)
-        if (e.tasks.indexOf("minimo") > -1) {
-          e.tasks = e.tasks.filter(function (t) { return t !== "minimo"; });
-          e.min -= TASK_MIN.minimo;
-        }
-        if (idx > -1) {
-          e.tasks.splice(idx, 1);
-          e.min -= TASK_MIN[taskName];
-        } else {
-          e.tasks.push(taskName);
-          e.min += TASK_MIN[taskName];
-        }
-      }
-      if (e.min < 0) e.min = 0;
-      setDayEntry(dateStr, e);
+      applyTaskToggle(dateStr, kind, taskName);
       renderToday(container);
       renderMeter(document.getElementById("meterCard"));
       renderHeatmap(document.getElementById("heatmapCard"));
@@ -1171,6 +1265,15 @@
     container.querySelectorAll(".task-open").forEach(function (a) {
       a.addEventListener("click", function (ev) { ev.stopPropagation(); });
     });
+
+    // "repasar →" opens the built-in SRS reviewer instead of toggling the row
+    var srsBtn = document.getElementById("srsOpenBtn");
+    if (srsBtn) {
+      srsBtn.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        openSrsOverlay();
+      });
+    }
 
     document.getElementById("stepUp").addEventListener("click", function () {
       var e = dayEntry(dateStr);
@@ -1289,7 +1392,7 @@
   }
 
   function mergeData(remote, local) {
-    var merged = { version: 1, updated: new Date().toISOString(), days: {} };
+    var merged = { version: 1, updated: new Date().toISOString(), days: {}, srs: {}, srsNew: { date: null, count: 0 } };
     var allDates = {};
     Object.keys((remote && remote.days) || {}).forEach(function (k) { allDates[k] = true; });
     Object.keys((local && local.days) || {}).forEach(function (k) { allDates[k] = true; });
@@ -1299,10 +1402,50 @@
       if (r && l) merged.days[dateStr] = (r.min || 0) >= (l.min || 0) ? r : l;
       else merged.days[dateStr] = r || l;
     });
+
+    // ---- srs: per-card, keep the state with the higher reps (tie -> later due date) ----
+    var allCardIds = {};
+    Object.keys((remote && remote.srs) || {}).forEach(function (k) { allCardIds[k] = true; });
+    Object.keys((local && local.srs) || {}).forEach(function (k) { allCardIds[k] = true; });
+    Object.keys(allCardIds).forEach(function (cardId) {
+      var r = remote && remote.srs && remote.srs[cardId];
+      var l = local && local.srs && local.srs[cardId];
+      if (r && l) {
+        if ((r.reps || 0) !== (l.reps || 0)) {
+          merged.srs[cardId] = (r.reps || 0) > (l.reps || 0) ? r : l;
+        } else {
+          merged.srs[cardId] = (r.due || "") >= (l.due || "") ? r : l;
+        }
+      } else {
+        merged.srs[cardId] = r || l;
+      }
+    });
+
+    // ---- srsNew: keep the one with the later date (tie -> higher count) ----
+    var rNew = (remote && remote.srsNew) || null;
+    var lNew = (local && local.srsNew) || null;
+    if (rNew && lNew) {
+      if ((rNew.date || "") !== (lNew.date || "")) {
+        merged.srsNew = (rNew.date || "") > (lNew.date || "") ? rNew : lNew;
+      } else {
+        merged.srsNew = (rNew.count || 0) >= (lNew.count || 0) ? rNew : lNew;
+      }
+    } else {
+      merged.srsNew = rNew || lNew || { date: null, count: 0 };
+    }
+
     return merged;
   }
+  // Deviation (documented): dataEquals now also compares srs/srsNew, not just
+  // days. It gates the "push merged data back after pull" decision in
+  // syncPull() — if it only checked .days, a pull that changed SRS state but
+  // left .days untouched (the common case: grading cards) would wrongly
+  // decide nothing changed and skip pushing the merge back, silently
+  // breaking two-way SRS sync.
   function dataEquals(a, b) {
-    return JSON.stringify(a.days) === JSON.stringify(b.days);
+    return JSON.stringify(a.days) === JSON.stringify(b.days) &&
+      JSON.stringify(a.srs || {}) === JSON.stringify(b.srs || {}) &&
+      JSON.stringify(a.srsNew || {}) === JSON.stringify(b.srsNew || {});
   }
 
   function syncPull(showStatus) {
@@ -1475,7 +1618,237 @@
   });
 
   /* ============================================================
-     9. INIT
+     9. SRS FLASHCARD REVIEWER (built-in spaced repetition, SM-2 lite)
+     Replaces the old external AnkiWeb link. Deck comes from cards.js
+     (global CARDS array, generated by deck/export_cards_js.py). SRS
+     state lives in DATA.srs / DATA.srsNew (synced like everything else).
+     ============================================================ */
+  var CARDS_BY_ID = {};
+  if (CARDS_OK) {
+    for (var _ci = 0; _ci < CARDS.length; _ci++) CARDS_BY_ID[CARDS[_ci].id] = CARDS[_ci];
+  }
+  var NEW_CARDS_PER_DAY = 10;
+
+  function srsNewCountToday(dateStr) {
+    return (DATA.srsNew && DATA.srsNew.date === dateStr) ? (DATA.srsNew.count || 0) : 0;
+  }
+  function bumpSrsNew(dateStr) {
+    if (!DATA.srsNew || DATA.srsNew.date !== dateStr) {
+      DATA.srsNew = { date: dateStr, count: 1 };
+    } else {
+      DATA.srsNew.count = (DATA.srsNew.count || 0) + 1;
+    }
+  }
+
+  // Pure preview (no mutation) of what a session would contain right now —
+  // used for the "X para hoy" hint on the task row.
+  function srsQueuePreview() {
+    if (!CARDS_OK) return { due: 0, newAvail: 0, total: 0 };
+    var dateStr = isoDate(today);
+    var due = 0, newCount = 0;
+    for (var i = 0; i < CARDS.length; i++) {
+      var st = DATA.srs[CARDS[i].id];
+      if (st) { if (st.due <= dateStr) due++; }
+      else newCount++;
+    }
+    var cap = Math.max(0, NEW_CARDS_PER_DAY - srsNewCountToday(dateStr));
+    var newAvail = Math.min(newCount, cap);
+    return { due: due, newAvail: newAvail, total: due + newAvail };
+  }
+  function srsHintText() {
+    if (!CARDS_OK) return "tarjetas no disponibles";
+    var counts = srsQueuePreview();
+    return counts.total > 0 ? (counts.total + " para hoy") : "✓ al día";
+  }
+
+  // Builds today's session queue: all due cards (csv order), then new cards
+  // (phase 1 -> 2 -> 3, csv order within phase), capped at the remaining
+  // new-card allowance for today. Introducing a new card into the queue
+  // immediately creates its initial SRS state (due = today) and bumps the
+  // daily new-card counter, and persists both — so reopening the reviewer
+  // later the same day (without grading) won't re-introduce or re-count it;
+  // it'll simply show up as "due" instead of "new".
+  function buildSrsQueue() {
+    var dateStr = isoDate(today);
+    var due = [];
+    var newByPhase = { 1: [], 2: [], 3: [] };
+    for (var i = 0; i < CARDS.length; i++) {
+      var c = CARDS[i];
+      var st = DATA.srs[c.id];
+      if (st) {
+        if (st.due <= dateStr) due.push(c.id);
+      } else {
+        newByPhase[c.phase].push(c.id);
+      }
+    }
+    var cap = Math.max(0, NEW_CARDS_PER_DAY - srsNewCountToday(dateStr));
+    var newOrdered = newByPhase[1].concat(newByPhase[2]).concat(newByPhase[3]).slice(0, cap);
+    var introduced = false;
+    newOrdered.forEach(function (id) {
+      DATA.srs[id] = { reps: 0, iv: 0, ease: 250, lapses: 0, due: dateStr };
+      bumpSrsNew(dateStr);
+      introduced = true;
+    });
+    if (introduced) saveData(DATA);
+    return due.concat(newOrdered);
+  }
+
+  // SM-2-lite grading, days granularity, relative to `today` (never
+  // new Date()) so the ?d= debug override works throughout.
+  function gradeSrsCard(cardId, grade) {
+    var dateStr = isoDate(today);
+    var st = DATA.srs[cardId] || { reps: 0, iv: 0, ease: 250, lapses: 0, due: dateStr };
+    if (grade === "again") {
+      st.ease = Math.max(130, st.ease - 20);
+      st.iv = 1;
+      st.lapses = (st.lapses || 0) + 1;
+      st.due = isoDate(addDays(today, 1));
+    } else if (grade === "good") {
+      if (st.reps === 0) st.iv = 1;
+      else if (st.reps === 1) st.iv = 3;
+      else st.iv = Math.round(st.iv * st.ease / 100);
+      st.due = isoDate(addDays(today, st.iv));
+      st.reps += 1;
+    } else if (grade === "easy") {
+      st.iv = Math.max(2, Math.round(st.iv * st.ease / 100 * 1.3));
+      st.ease += 15;
+      st.due = isoDate(addDays(today, st.iv));
+      st.reps += 1;
+    }
+    DATA.srs[cardId] = st;
+    saveData(DATA);
+  }
+
+  var srsSession = null; // { queue: [ids], pos, reviewed, showingAnswer }
+
+  function openSrsOverlay() {
+    if (!CARDS_OK) return;
+    var queue = buildSrsQueue();
+    srsSession = { queue: queue, pos: 0, reviewed: 0, showingAnswer: false };
+    var overlay = document.getElementById("srsOverlay");
+    overlay.classList.add("open");
+    overlay.setAttribute("aria-hidden", "false");
+    renderSrsStep();
+  }
+  function closeSrsOverlay() {
+    var overlay = document.getElementById("srsOverlay");
+    overlay.classList.remove("open");
+    overlay.setAttribute("aria-hidden", "true");
+    srsSession = null;
+    var todayCard = document.getElementById("todayCard");
+    if (todayCard) renderToday(todayCard); // refresh the "X para hoy" hint
+  }
+
+  // Reuses the same toggle logic as the manual task rows (applyTaskToggle),
+  // so auto-marking "anki" done applies the identical mutual-exclusion with
+  // "minimo" and the identical minute bookkeeping.
+  function markAnkiDoneIfNeeded() {
+    var dateStr = isoDate(today);
+    var e = dayEntry(dateStr);
+    if ((e.tasks || []).indexOf("anki") > -1) return; // already logged
+    var kind = todaysPlan(today.getDay()).kind;
+    applyTaskToggle(dateStr, kind, "anki");
+    var meterCard = document.getElementById("meterCard");
+    var heatmapCard = document.getElementById("heatmapCard");
+    if (meterCard) renderMeter(meterCard);
+    if (heatmapCard) renderHeatmap(heatmapCard);
+  }
+
+  function renderSrsStep() {
+    var body = document.getElementById("srsBody");
+    var counter = document.getElementById("srsCounter");
+    if (!srsSession || srsSession.pos >= srsSession.queue.length) {
+      counter.textContent = "";
+      var reviewedCount = srsSession ? srsSession.reviewed : 0;
+      markAnkiDoneIfNeeded();
+      body.innerHTML =
+        '<div class="srs-done">' +
+        '<div class="big">¡Hecho!</div>' +
+        '<p>' + reviewedCount + ' tarjeta' + (reviewedCount === 1 ? "" : "s") +
+          ' repasada' + (reviewedCount === 1 ? "" : "s") + '.</p>' +
+        '<button class="srs-done-close" id="srsDoneCloseBtn">Cerrar</button>' +
+        '</div>';
+      document.getElementById("srsDoneCloseBtn").addEventListener("click", closeSrsOverlay);
+      return;
+    }
+    var remaining = srsSession.queue.length - srsSession.pos;
+    counter.textContent = remaining + " restante" + (remaining === 1 ? "" : "s");
+    srsSession.showingAnswer = false;
+    var cardId = srsSession.queue[srsSession.pos];
+    var card = CARDS_BY_ID[cardId];
+
+    if (!card) {
+      // Fail loudly rather than silently skip: this would mean stored SRS
+      // state references a card id that no longer exists in cards.js.
+      body.innerHTML =
+        '<p style="color:#e0292f">⚠ Tarjeta "' + escapeHtml(cardId) + '" no existe en cards.js.</p>' +
+        '<button class="srs-show-btn" id="srsSkipBtn">Siguiente</button>';
+      document.getElementById("srsSkipBtn").addEventListener("click", function () {
+        srsSession.pos++;
+        renderSrsStep();
+      });
+      return;
+    }
+
+    body.innerHTML =
+      '<p class="srs-front">' + escapeHtml(card.front) + '</p>' +
+      '<button class="srs-show-btn" id="srsShowBtn">Mostrar respuesta</button>';
+    document.getElementById("srsShowBtn").addEventListener("click", revealSrsAnswer);
+  }
+
+  function revealSrsAnswer() {
+    if (!srsSession || srsSession.showingAnswer) return;
+    srsSession.showingAnswer = true;
+    var cardId = srsSession.queue[srsSession.pos];
+    var card = CARDS_BY_ID[cardId];
+    var body = document.getElementById("srsBody");
+    body.innerHTML =
+      '<p class="srs-front">' + escapeHtml(card.front) + '</p>' +
+      '<p class="srs-back">' + escapeHtml(card.back) + '</p>' +
+      (card.extra ? '<p class="srs-extra">' + escapeHtml(card.extra) + '</p>' : "") +
+      '<div class="srs-grades">' +
+        '<button class="srs-grade-btn srs-grade-again" id="srsAgainBtn">Otra vez</button>' +
+        '<button class="srs-grade-btn srs-grade-good" id="srsGoodBtn">Bien</button>' +
+        '<button class="srs-grade-btn srs-grade-easy" id="srsEasyBtn">Fácil</button>' +
+      '</div>';
+    document.getElementById("srsAgainBtn").addEventListener("click", function () { answerSrs("again"); });
+    document.getElementById("srsGoodBtn").addEventListener("click", function () { answerSrs("good"); });
+    document.getElementById("srsEasyBtn").addEventListener("click", function () { answerSrs("easy"); });
+  }
+
+  function answerSrs(grade) {
+    if (!srsSession || !srsSession.showingAnswer) return;
+    var cardId = srsSession.queue[srsSession.pos];
+    gradeSrsCard(cardId, grade);
+    srsSession.reviewed++;
+    if (grade === "again") {
+      // must be seen again this session until graded Bien/Fácil
+      srsSession.queue.push(cardId);
+    }
+    srsSession.pos++;
+    renderSrsStep();
+  }
+
+  document.getElementById("srsCloseBtn").addEventListener("click", closeSrsOverlay);
+
+  // Keyboard nicety (desktop): Space = show answer, 1/2/3 = grades.
+  document.addEventListener("keydown", function (ev) {
+    if (!srsSession) return;
+    var overlay = document.getElementById("srsOverlay");
+    if (!overlay || !overlay.classList.contains("open")) return;
+    if (ev.key === " " || ev.code === "Space") {
+      if (!srsSession.showingAnswer) { ev.preventDefault(); revealSrsAnswer(); }
+      return;
+    }
+    if (srsSession.showingAnswer) {
+      if (ev.key === "1") answerSrs("again");
+      else if (ev.key === "2") answerSrs("good");
+      else if (ev.key === "3") answerSrs("easy");
+    }
+  });
+
+  /* ============================================================
+     10. INIT
      ============================================================ */
   renderBanners();
   render();

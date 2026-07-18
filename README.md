@@ -3,9 +3,9 @@
 A mobile-first, no-build Spanish practice tracker for Alex — a B1+ learner
 doing ≤20 minutes/day of Spanish practice on the way to moving to Madrid in
 January 2027. It's a single static `index.html` (vanilla HTML/CSS/JS, no
-frameworks, no build step) plus a small companion Anki deck. Open it on your
-phone, log today's practice in one tap, and let the weekly 60-minute floor —
-not a streak — keep you honest.
+frameworks, no build step) with a built-in spaced-repetition flashcard
+reviewer. Open it on your phone, log today's practice in one tap, and let
+the weekly 60-minute floor — not a streak — keep you honest.
 
 ## THE ONE URL
 
@@ -19,7 +19,7 @@ full-screen like a native app.
 
 ## The weekly loop (≤20 min/day)
 
-One primary activity per day plus 5′ of Anki. The structure follows Paul
+One primary activity per day plus 5′ of flashcards. The structure follows Paul
 Nation's "four strands" research — balanced time across meaning-focused
 input, meaning-focused output, deliberate study, and *fluency development*
 (the strand most routines skip entirely, and the one that most directly
@@ -36,10 +36,14 @@ automatically; every day is one tap to start.
 | **Sat** | Free — conversation or catch-up | output |
 | **Sun** | Rest, or minimum day. Weekly check-in arrives at 7pm | — |
 
-- **Every day — 5′ Anki** (the study strand). Vocab and, in Phase 1, daily
-  `vosotros` drilling. The tracker's "abrir →" link opens
-  [AnkiWeb](https://ankiweb.net/decks) — for it to have your cards, import
-  `madrid_spanish.apkg` into Anki once and enable AnkiWeb sync (free account).
+- **Every day — 5′ tarjetas** (the study strand). Vocab and, in Phase 1, daily
+  `vosotros` drilling, via a **built-in spaced-repetition reviewer** — no
+  external app, no account, no import step. Tap "repasar →" on the tracker's
+  card row, grade each card **Otra vez / Bien / Fácil**, and its schedule
+  (SM-2 lite) syncs across devices through the same GitHub token as the rest
+  of the data. About 10 new cards a day, phase order (1 → 2 → 3), due cards
+  first. (`deck/madrid_spanish.apkg` still exists for anyone who'd rather use
+  real Anki — see "Rebuilding the deck" below.)
 - **Minimum viable day (bad-day fallback) — 3′.** 5 flashcards + one sentence
   said out loud. Counts. Better than zero.
 
@@ -91,12 +95,36 @@ is never sent anywhere except directly to `api.github.com`.
 ## A note on `data/stats.json` being public
 
 If this repo is public (as GitHub Pages typically requires on the free tier),
-`data/stats.json` is publicly readable. It only ever contains dates and
-practice minutes/task flags — no personal content, no transcripts, nothing
-sensitive. That's a deliberate tradeoff for a zero-backend, zero-cost sync
-mechanism.
+`data/stats.json` is publicly readable. It only ever contains dates,
+practice minutes/task flags, and flashcard scheduling state (card-id hashes,
+due dates, ease/interval numbers) — no personal content, no transcripts,
+nothing sensitive. That's a deliberate tradeoff for a zero-backend,
+zero-cost sync mechanism.
 
-## Rebuilding the Anki deck
+## Rebuilding the deck
+
+Both the in-app reviewer and the optional Anki deck are generated from the
+same source of truth, `deck/cards.csv` (90 rows: `front,back,extra,tags`,
+tags space-separated with exactly one `phase1`/`phase2`/`phase3` tag plus a
+category tag). Never hand-edit `cards.js` or `madrid_spanish.apkg` — edit the
+CSV, run the relevant script, then commit both the CSV and the regenerated
+output.
+
+**In-app reviewer** (`cards.js`, loaded by `index.html`):
+
+```
+python deck/export_cards_js.py
+```
+
+Reads `deck/cards.csv` and writes `cards.js` at the repo root as a plain
+`const CARDS = [...]` array (each card gets a stable id: an 8-hex-digit djb2
+hash of its `front` text). Fails loudly — nonzero exit, clear message — on a
+missing file, wrong header, a row count other than 90, a missing phase tag,
+or an id collision. Workflow: edit `deck/cards.csv` → run the script →
+commit both `deck/cards.csv` and `cards.js`.
+
+**Optional Anki deck** (`madrid_spanish.apkg`, for anyone who prefers real
+Anki over the built-in reviewer):
 
 ```
 pip install genanki
