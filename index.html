@@ -962,6 +962,16 @@
       if (kind === "gliglish" && !isWeekend) {
         promptBlock += '<a class="gliglish-link" href="https://gliglish.com" target="_blank" rel="noopener">' +
           'Abrir Gliglish → elige "Spanish (Spain)"</a>';
+      } else {
+        // One-tap start: open Claude with the conversation pre-loaded; the
+        // user only has to tap the voice icon once it opens.
+        var claudeQ = "Practiquemos español hablado (castellano peninsular, nivel B1+). " +
+          "Conversa conmigo sobre este tema, hazme preguntas de seguimiento, " +
+          "corrige brevemente solo mis errores importantes y usa vosotros cuando sea natural. " +
+          "Tema: " + picked.prompt.es + " Empieza tú con una primera pregunta.";
+        promptBlock += '<a class="gliglish-link" href="https://claude.ai/new?q=' +
+          encodeURIComponent(claudeQ) + '" target="_blank" rel="noopener">' +
+          'Hablar con Claude → (al abrirse, toca el micro)</a>';
       }
     }
 
