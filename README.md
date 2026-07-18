@@ -17,22 +17,36 @@ Pin that URL to your phone's
 home screen (Share → Add to Home Screen) — the app is configured to launch
 full-screen like a native app.
 
-## The daily loop (≤20 min)
+## The weekly loop (≤20 min/day)
 
-- **Mon / Wed / Fri — 8′ conversación, Claude voice mode.** Open conversation
-  in Spanish, no script. Multilingual voice mode has been out of beta since
-  June 2026 and works on iOS/Android with push-to-talk.
-- **Tue / Thu — 8′ roleplay, [Gliglish](https://gliglish.com).** Free tier
-  gives 10 min/day. Choose **"Spanish (Spain)"** as the dialect every time —
-  it defaults to Latin American Spanish otherwise.
-- **Every day — 5′ Anki.** Vocab and (in Phase 1) daily `vosotros` drilling.
-  The tracker's "abrir →" link opens [AnkiWeb](https://ankiweb.net/decks) — for
-  it to have your cards, import `madrid_spanish.apkg` into Anki once and enable
-  AnkiWeb sync (free account) in the app.
-- **Minimum viable day (bad-day fallback) — 3′.** 5 flashcards + one voice
-  exchange. Counts as a full day. Better than zero.
-- **Sat / Sun — free / catch-up.** Optional. The tracker will gently nudge you
-  if the week is short of 60′.
+One primary activity per day plus 5′ of Anki. The structure follows Paul
+Nation's "four strands" research — balanced time across meaning-focused
+input, meaning-focused output, deliberate study, and *fluency development*
+(the strand most routines skip entirely, and the one that most directly
+builds speaking confidence). The tracker shows the right activity
+automatically; every day is one tap to start.
+
+| Day | Activity | Strand |
+|-----|----------|--------|
+| **Mon** | 8′ open conversation — Claude voice mode (topic pre-loaded) | output |
+| **Tue** | 10′ listening — [Hoy Hablamos](https://open.spotify.com/show/1puKUN2oF1M5DMt8o4M1bA), daily Castilian podcast at **normal speed** | input |
+| **Wed** | 9′ — **4/3/2 technique**: tell the same story 3× in 4, 3, then 2 minutes (built-in timer). Replicated gains in fluency *and* accuracy | fluency |
+| **Thu** | 8′ roleplay — [Gliglish](https://gliglish.com), always **"Spanish (Spain)"** (free tier: 10 min/day) | output |
+| **Fri** | 8′ shadowing — [Español con Juan](https://www.youtube.com/@EspanolconJuan/videos): repeat ~1 min aloud *simultaneously*, 3 passes | fluency + ear |
+| **Sat** | Free — conversation or catch-up | output |
+| **Sun** | Rest, or minimum day. Weekly check-in arrives at 7pm | — |
+
+- **Every day — 5′ Anki** (the study strand). Vocab and, in Phase 1, daily
+  `vosotros` drilling. The tracker's "abrir →" link opens
+  [AnkiWeb](https://ankiweb.net/decks) — for it to have your cards, import
+  `madrid_spanish.apkg` into Anki once and enable AnkiWeb sync (free account).
+- **Minimum viable day (bad-day fallback) — 3′.** 5 flashcards + one sentence
+  said out loud. Counts. Better than zero.
+
+Why listening at natural speed matters: the standard arrival shock isn't
+failing to speak — it's failing to *understand*, because learner audio runs at
+60–80% of real speed while Madrid runs at 170–190 wpm. Tue trains that
+directly and Fri's shadowing converts it into speech rhythm.
 
 ## Weekly rules
 

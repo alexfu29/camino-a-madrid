@@ -316,6 +316,24 @@
     min-height: var(--tap); display:flex; align-items:center;
   }
 
+  .day-instruction {
+    font-size: 0.85rem; color: var(--text-muted);
+    margin: 8px 0 0; line-height: 1.45;
+  }
+  .cuatro-timer {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 12px; padding: 10px 12px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .cuatro-round { flex: 1; font-size: 0.8rem; color: var(--text-muted); }
+  .cuatro-clock { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cuatro-btn {
+    min-height: var(--tap); padding: 0 14px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--phase3); color: #fff;
+    font: inherit; font-weight: 600; font-size: 0.85rem; cursor: pointer;
+  }
+
   .task-row {
     display: flex;
     align-items: center;
@@ -678,6 +696,11 @@
   }
 
   var today = atMidnight(new Date());
+  // Debug: ?d=2026-09-15 renders the app as if it were that date (local).
+  var dOverride = new URLSearchParams(location.search).get("d");
+  if (dOverride && /^\d{4}-\d{2}-\d{2}$/.test(dOverride)) {
+    today = atMidnight(new Date(dOverride + "T12:00:00"));
+  }
 
   /* ============================================================
      2. STORAGE / DATA MODEL
@@ -780,18 +803,45 @@
     return v;
   }
 
-  function todaysKind(dow) {
-    // dow: 0=Sun..6=Sat
-    if (dow === 1 || dow === 3 || dow === 5) return "voice";
-    if (dow === 2 || dow === 4) return "gliglish";
-    return "voice"; // Sat/Sun free day still shown as voice-style optional prompt
-  }
+  /* Weekly template balancing Nation's four strands in ~15-20'/day:
+     output (Mon/Thu/Sat), input at natural speed (Tue), fluency
+     development (Wed 4/3/2, Fri shadowing), daily Anki = study strand. */
+  var DAY_PLANS = {
+    1: { kind: "voice", badge: "8′ conversación — Claude voz", task: "Hablar 8′", min: 8,
+         promptKind: "voice", color: "var(--phase1)", href: "claude",
+         hint: "Claude voz — al abrirse, toca el micro" },
+    2: { kind: "listen", badge: "10′ oído — Hoy Hablamos", task: "Escuchar 10′", min: 10,
+         promptKind: null, color: "var(--phase2)",
+         href: "https://open.spotify.com/show/1puKUN2oF1M5DMt8o4M1bA",
+         hint: "episodio de hoy, velocidad normal",
+         instruction: "Pon el episodio de hoy a velocidad normal — nada de audio lento. ¿Fácil? Sube a 1.25×. No hace falta entenderlo todo: estás entrenando la velocidad del oído." },
+    3: { kind: "cuatro", badge: "9′ fluidez — técnica 4/3/2", task: "Contar 3 veces 9′", min: 9,
+         promptKind: "voice", color: "var(--phase3)", timer: true,
+         hint: "el mismo tema, 3 rondas cada vez más cortas",
+         instruction: "Cuenta este tema en voz alta 3 veces: 4, luego 3, luego 2 minutos. El mismo contenido en menos tiempo — así se automatiza la fluidez." },
+    4: { kind: "gliglish", badge: "8′ roleplay — Gliglish", task: "Roleplay 8′", min: 8,
+         promptKind: "gliglish", color: "var(--phase2)", href: "https://gliglish.com",
+         hint: 'Gliglish — elige "Spanish (Spain)"' },
+    5: { kind: "shadow", badge: "8′ shadowing — Español con Juan", task: "Shadowing 8′", min: 8,
+         promptKind: null, color: "var(--phase3)",
+         href: "https://www.youtube.com/@EspanolconJuan/videos",
+         hint: "repite en voz alta a la vez que el vídeo",
+         instruction: "Elige ~1 minuto de un vídeo. Escúchalo una vez. Después repítelo en voz alta A LA VEZ que habla, 3 pasadas. Imita el ritmo y la entonación, no solo las palabras." },
+    6: { kind: "voice", badge: "Día libre — conversación o recuperación", task: "Hablar 8′", min: 8,
+         promptKind: "voice", color: "var(--text-muted)", href: "claude",
+         hint: "Claude voz — al abrirse, toca el micro" },
+    0: { kind: "voice", badge: "Descanso — o día mínimo", task: "Hablar 8′", min: 8,
+         promptKind: "voice", color: "var(--text-muted)", href: "claude",
+         hint: "Claude voz — al abrirse, toca el micro" }
+  };
+  function todaysPlan(dow) { return DAY_PLANS[dow]; }
 
   function pickTodaysPrompt() {
     if (!PROMPTS_OK) return null;
     var phase = phaseOfDate(today);
     var dow = today.getDay();
-    var kind = todaysKind(dow);
+    var kind = todaysPlan(dow).promptKind;
+    if (!kind) return null; // listening/shadowing days carry instructions, not prompts
     var subset;
     try {
       subset = PROMPTS.filter(function (p) { return p && p.phase === phase && p.kind === kind; });
@@ -940,20 +990,10 @@
     var dow = today.getDay();
     var dateStr = isoDate(today);
     var entry = dayEntry(dateStr);
-    var kind = todaysKind(dow);
+    var plan = todaysPlan(dow);
+    var kind = plan.kind;
     var isWeekend = (dow === 0 || dow === 6);
-
-    var kindLabel, kindColorVar;
-    if (isWeekend) {
-      kindLabel = "Día libre / recuperación";
-      kindColorVar = "var(--text-muted)";
-    } else if (kind === "gliglish") {
-      kindLabel = "8′ roleplay — Gliglish";
-      kindColorVar = "var(--phase2)";
-    } else {
-      kindLabel = "8′ conversación — Claude voz";
-      kindColorVar = "var(--phase1)";
-    }
+    TASK_MIN.speak = plan.min; // main task minutes vary by day
 
     var promptBlock = "";
     var picked = pickTodaysPrompt();
@@ -967,22 +1007,32 @@
           '<button class="otro-link" id="otroBtn">otro →</button>' +
         '</div>';
     }
+    if (plan.instruction) {
+      promptBlock += '<p class="day-instruction">' + escapeHtml(plan.instruction) + '</p>';
+    }
+    if (plan.timer) {
+      promptBlock +=
+        '<div class="cuatro-timer" id="cuatroTimer">' +
+          '<span class="cuatro-round" id="cuatroRound">Ronda 1 de 3 — 4:00</span>' +
+          '<span class="cuatro-clock" id="cuatroClock">4:00</span>' +
+          '<button class="cuatro-btn" id="cuatroBtn">Empezar</button>' +
+        '</div>';
+    }
 
-    // One-tap launch targets for the task rows. On voice days the link opens
-    // Claude with the conversation pre-loaded (user then taps the mic once).
-    var speakHref, speakHint;
-    if (kind === "gliglish" && !isWeekend) {
-      speakHref = "https://gliglish.com";
-      speakHint = 'Gliglish — elige "Spanish (Spain)"';
-    } else {
+    // One-tap launch target for the main task row. "claude" opens Claude with
+    // the conversation pre-loaded (user then taps the mic once).
+    var speakHref = plan.href;
+    if (speakHref === "claude") {
       var claudeQ = "Practiquemos español hablado (castellano peninsular, nivel B1+). " +
         "Conversa conmigo sobre este tema, hazme preguntas de seguimiento, " +
         "corrige brevemente solo mis errores importantes y usa vosotros cuando sea natural. " +
         "Tema: " + (picked ? picked.prompt.es : "un tema que elijas tú.") +
         " Empieza tú con una primera pregunta.";
       speakHref = "https://claude.ai/new?q=" + encodeURIComponent(claudeQ);
-      speakHint = "Claude voz — al abrirse, toca el micro";
     }
+    var speakOpen = speakHref
+      ? '<a class="task-open" href="' + speakHref + '" target="_blank" rel="noopener">abrir →</a>'
+      : "";
 
     var speakDone = entry.tasks.indexOf("speak") > -1;
     var ankiDone = entry.tasks.indexOf("anki") > -1;
@@ -998,13 +1048,13 @@
     }
 
     container.innerHTML =
-      '<span class="today-kind" style="background:' + kindColorVar + ';color:#fff;opacity:0.92">' +
-        escapeHtml(kindLabel) + '</span>' +
+      '<span class="today-kind" style="background:' + plan.color + ';color:#fff;opacity:0.92">' +
+        escapeHtml(plan.badge) + '</span>' +
       promptBlock +
       '<div class="task-row' + (speakDone ? " done" : "") + '" id="taskSpeak" role="button" tabindex="0">' +
         '<span class="task-check">' + (speakDone ? "✓" : "") + '</span>' +
-        '<span class="task-label">Hablar 8′<small>' + escapeHtml(speakHint) + '</small></span>' +
-        '<a class="task-open" href="' + speakHref + '" target="_blank" rel="noopener">abrir →</a>' +
+        '<span class="task-label">' + escapeHtml(plan.task) + '<small>' + escapeHtml(plan.hint) + '</small></span>' +
+        speakOpen +
       '</div>' +
       '<div class="task-row' + (ankiDone ? " done" : "") + '" id="taskAnki" role="button" tabindex="0">' +
         '<span class="task-check">' + (ankiDone ? "✓" : "") + '</span>' +
@@ -1026,6 +1076,44 @@
         bumpOffset(dateStr);
         renderToday(container);
       });
+    }
+
+    if (plan.timer) {
+      var ROUNDS = [240, 180, 120];
+      var roundIdx = 0, remaining = ROUNDS[0], ticking = null;
+      var roundEl = document.getElementById("cuatroRound");
+      var clockEl = document.getElementById("cuatroClock");
+      var btnEl = document.getElementById("cuatroBtn");
+      function fmt(s) { return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+      function showRound() {
+        roundEl.textContent = "Ronda " + (roundIdx + 1) + " de 3 — " + fmt(ROUNDS[roundIdx]);
+        clockEl.textContent = fmt(remaining);
+      }
+      function endRound() {
+        clearInterval(ticking); ticking = null;
+        if (navigator.vibrate) navigator.vibrate(200);
+        roundIdx++;
+        if (roundIdx >= ROUNDS.length) {
+          roundEl.textContent = "¡Hecho! Marca la tarea.";
+          clockEl.textContent = "✓";
+          btnEl.style.display = "none";
+        } else {
+          remaining = ROUNDS[roundIdx];
+          showRound();
+          btnEl.textContent = "Empezar ronda " + (roundIdx + 1);
+        }
+      }
+      btnEl.addEventListener("click", function () {
+        if (ticking) { endRound(); return; } // running => skip to next round
+        btnEl.textContent = "Terminar ronda →";
+        ticking = setInterval(function () {
+          remaining--;
+          if (remaining <= 0) { endRound(); return; }
+          clockEl.textContent = fmt(remaining);
+        }, 1000);
+      });
+      showRound();
+      btnEl.textContent = "Empezar";
     }
 
     function toggleTask(taskName) {

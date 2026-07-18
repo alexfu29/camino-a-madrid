@@ -2,6 +2,12 @@
 
 2026-07-17 → 2026-12-31 · ≤20 min/day · no streaks, only a 60′/week floor.
 
+**The week** (research-backed — Nation's four strands; see README):
+Mon conversation (Claude voice) · Tue natural-speed listening (Hoy Hablamos) ·
+Wed 4/3/2 fluency drill · Thu roleplay (Gliglish, Spain dialect) · Fri
+shadowing (Español con Juan) · Sat free/catch-up · Sun rest · +5′ Anki daily.
+The phase themes below feed the Mon/Wed/Sat topics and Thu scenarios.
+
 ---
 
 ## Fase 1 — Reboot
