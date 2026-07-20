@@ -308,7 +308,7 @@
     margin-bottom: 10px;
   }
   .prompt-es { font-size: 1.15rem; font-weight: 500; margin: 6px 0 2px; }
-  .prompt-en { font-size: 0.82rem; color: var(--text-muted); margin: 0 0 8px; }
+  .prompt-frases { font-size: 0.82rem; color: var(--text-muted); margin: 0 0 8px; font-style: italic; }
   .prompt-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   .otro-link {
     background: none; border: none; color: var(--phase1); text-decoration: none;
@@ -630,7 +630,7 @@
 
 <header class="app-header">
   <h1>Camino a Madrid<span class="sub">Enero 2027</span></h1>
-  <button class="icon-btn" id="settingsBtn" aria-label="Ajustes / Settings" title="Ajustes">⚙️</button>
+  <button class="icon-btn" id="settingsBtn" aria-label="Ajustes" title="Ajustes">⚙️</button>
 </header>
 
 <div id="banners"></div>
@@ -644,13 +644,13 @@
   <button class="icon-btn close-x" id="drawerClose" aria-label="Cerrar ajustes">✕</button>
   <h2>Ajustes</h2>
 
-  <label for="patInput">Token de GitHub (fine-grained PAT)</label>
+  <label for="patInput">Token de GitHub</label>
   <input type="password" id="patInput" placeholder="github_pat_…" autocomplete="off">
 
-  <label for="ownerInput">Owner (usuario/organización)</label>
-  <input type="text" id="ownerInput" placeholder="p.ej. alexf1688">
+  <label for="ownerInput">Usuario de GitHub</label>
+  <input type="text" id="ownerInput" placeholder="p.ej. alexfu29">
 
-  <label for="repoInput">Repo</label>
+  <label for="repoInput">Repositorio</label>
   <input type="text" id="repoInput" placeholder="camino-a-madrid">
 
   <button class="primary" id="saveSettingsBtn">Guardar ajustes</button>
@@ -702,13 +702,13 @@
 
   var PROMPTS_OK = true;
   if (typeof PROMPTS === "undefined" || !Array.isArray(PROMPTS) || PROMPTS.length === 0) {
-    showFatal("prompts.js missing or broken — no se pudieron cargar las frases de práctica.");
+    showFatal("Error: no se pudieron cargar las frases de práctica (prompts.js).");
     PROMPTS_OK = false;
   }
 
   var CARDS_OK = true;
   if (typeof CARDS === "undefined" || !Array.isArray(CARDS) || CARDS.length !== 90) {
-    showFatal("cards.js missing or broken — no se pudieron cargar las tarjetas.");
+    showFatal("Error: no se pudieron cargar las tarjetas (cards.js).");
     CARDS_OK = false;
   }
 
@@ -759,7 +759,7 @@
     if (d <= PHASE2_END) return 2;
     return 3;
   }
-  var PHASE_NAMES = { 1: "Reboot", 2: "Expansión", 3: "Simulación Madrid" };
+  var PHASE_NAMES = { 1: "Reinicio", 2: "Expansión", 3: "Simulación Madrid" };
 
   // week index (0-based) for a given date, clamped into [0, TOTAL_WEEKS-1]
   function weekIndexOf(d) {
@@ -933,7 +933,7 @@
     try {
       subset = PROMPTS.filter(function (p) { return p && p.phase === phase && p.kind === kind; });
     } catch (e) {
-      showFatal("prompts.js missing or broken — error al filtrar las frases.");
+      showFatal("Error al filtrar las frases de práctica (prompts.js).");
       return null;
     }
     if (subset.length === 0) {
@@ -1098,7 +1098,7 @@
       '<p class="metro-caption">Semana ' + (curWeek + 1) + ' de ' + TOTAL_WEEKS + ' · Fase ' +
         phaseOfDate(today) + ': ' + PHASE_NAMES[phaseOfDate(today)] + '</p>' +
       '<div class="phase-legend">' +
-        '<span class="item"><span class="swatch" style="background:var(--phase1)"></span>Fase 1 · Reboot</span>' +
+        '<span class="item"><span class="swatch" style="background:var(--phase1)"></span>Fase 1 · Reinicio</span>' +
         '<span class="item"><span class="swatch" style="background:var(--phase2)"></span>Fase 2 · Expansión</span>' +
         '<span class="item"><span class="swatch" style="background:var(--phase3)"></span>Fase 3 · Simulación Madrid</span>' +
       '</div>';
@@ -1131,7 +1131,9 @@
         '<div class="prompt-row">' +
           '<div>' +
             '<p class="prompt-es">' + escapeHtml(picked.prompt.es) + '</p>' +
-            '<p class="prompt-en">' + escapeHtml(picked.prompt.en) + '</p>' +
+            (picked.prompt.frases
+              ? '<p class="prompt-frases">Intenta usar: ' + escapeHtml(picked.prompt.frases) + '</p>'
+              : "") +
           '</div>' +
           '<button class="otro-link" id="otroBtn">otro →</button>' +
         '</div>';
