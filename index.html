@@ -1642,6 +1642,45 @@
     }
   }
 
+  // Keeps a session near the 5-minute budget. Due cards always take
+  // priority; new cards only fill what's left, so a review backlog can
+  // never be starved by new material.
+  var MAX_SESSION_CARDS = 24;
+
+  // Deterministic per-day shuffle (mulberry32 on a date+salt seed). Same
+  // order all day so closing and reopening is stable, different order each
+  // day so cards aren't learned as a fixed sequence.
+  function shuffledByDay(ids, dateStr, salt) {
+    var seed = 0;
+    var s = dateStr + (salt || "");
+    for (var i = 0; i < s.length; i++) seed = (seed * 31 + s.charCodeAt(i)) >>> 0;
+    var out = ids.slice();
+    for (var j = out.length - 1; j > 0; j--) {
+      seed = (seed + 0x6D2B79F5) >>> 0;
+      var t = seed;
+      t = Math.imul(t ^ (t >>> 15), t | 1) >>> 0;
+      t = (t ^ (t + Math.imul(t ^ (t >>> 7), t | 61))) >>> 0;
+      var k = ((t ^ (t >>> 14)) >>> 0) % (j + 1);
+      var tmp = out[j]; out[j] = out[k]; out[k] = tmp;
+    }
+    return out;
+  }
+
+  // Evenly interleaves new cards through the due cards instead of showing
+  // all reviews first — interleaved practice beats blocked practice for
+  // retention, and it stops a session from opening with a wall of repeats.
+  function interleave(due, fresh) {
+    if (!fresh.length) return due.slice();
+    if (!due.length) return fresh.slice();
+    var out = [], step = (due.length + fresh.length) / fresh.length, next = 0, fi = 0;
+    for (var i = 0; i < due.length; i++) {
+      while (fi < fresh.length && out.length >= next) { out.push(fresh[fi++]); next += step; }
+      out.push(due[i]);
+    }
+    while (fi < fresh.length) out.push(fresh[fi++]);
+    return out;
+  }
+
   // Pure preview (no mutation) of what a session would contain right now —
   // used for the "X para hoy" hint on the task row.
   function srsQueuePreview() {
@@ -1653,8 +1692,9 @@
       if (st) { if (st.due <= dateStr) due++; }
       else newCount++;
     }
-    var cap = Math.max(0, NEW_CARDS_PER_DAY - srsNewCountToday(dateStr));
-    var newAvail = Math.min(newCount, cap);
+    var dailyCap = Math.max(0, NEW_CARDS_PER_DAY - srsNewCountToday(dateStr));
+    var roomCap = Math.max(0, MAX_SESSION_CARDS - due);
+    var newAvail = Math.min(newCount, dailyCap, roomCap);
     return { due: due, newAvail: newAvail, total: due + newAvail };
   }
   function srsHintText() {
@@ -1683,8 +1723,10 @@
         newByPhase[c.phase].push(c.id);
       }
     }
-    var cap = Math.max(0, NEW_CARDS_PER_DAY - srsNewCountToday(dateStr));
-    var newOrdered = newByPhase[1].concat(newByPhase[2]).concat(newByPhase[3]).slice(0, cap);
+    var dailyCap = Math.max(0, NEW_CARDS_PER_DAY - srsNewCountToday(dateStr));
+    var roomCap = Math.max(0, MAX_SESSION_CARDS - due.length);
+    var newOrdered = newByPhase[1].concat(newByPhase[2]).concat(newByPhase[3])
+      .slice(0, Math.min(dailyCap, roomCap));
     var introduced = false;
     newOrdered.forEach(function (id) {
       DATA.srs[id] = { reps: 0, iv: 0, ease: 250, lapses: 0, due: dateStr };
@@ -1692,7 +1734,15 @@
       introduced = true;
     });
     if (introduced) saveData(DATA);
-    return due.concat(newOrdered);
+    return interleave(shuffledByDay(due, dateStr, "due"), newOrdered);
+  }
+
+  // ±10% jitter on intervals of 4+ days. Without it, cards introduced on
+  // the same day march in lockstep forever and every review lands as one
+  // big clump; this spreads the daily load out.
+  function fuzzInterval(iv) {
+    if (iv < 4) return iv;
+    return Math.max(2, Math.round(iv * (0.9 + Math.random() * 0.2)));
   }
 
   // SM-2-lite grading, days granularity, relative to `today` (never
@@ -1708,11 +1758,11 @@
     } else if (grade === "good") {
       if (st.reps === 0) st.iv = 1;
       else if (st.reps === 1) st.iv = 3;
-      else st.iv = Math.round(st.iv * st.ease / 100);
+      else st.iv = fuzzInterval(Math.round(st.iv * st.ease / 100));
       st.due = isoDate(addDays(today, st.iv));
       st.reps += 1;
     } else if (grade === "easy") {
-      st.iv = Math.max(2, Math.round(st.iv * st.ease / 100 * 1.3));
+      st.iv = fuzzInterval(Math.max(2, Math.round((st.iv || 1) * st.ease / 100 * 1.3)));
       st.ease += 15;
       st.due = isoDate(addDays(today, st.iv));
       st.reps += 1;
@@ -1726,7 +1776,7 @@
   function openSrsOverlay() {
     if (!CARDS_OK) return;
     var queue = buildSrsQueue();
-    srsSession = { queue: queue, pos: 0, reviewed: 0, showingAnswer: false };
+    srsSession = { queue: queue, pos: 0, reviewed: 0, showingAnswer: false, stepped: {} };
     var overlay = document.getElementById("srsOverlay");
     overlay.classList.add("open");
     overlay.setAttribute("aria-hidden", "false");
@@ -1818,14 +1868,38 @@
     document.getElementById("srsEasyBtn").addEventListener("click", function () { answerSrs("easy"); });
   }
 
+  // Re-inserts a card a few positions ahead so it comes back after a short
+  // gap (a handful of other cards) rather than immediately or at the very
+  // end of the session.
+  function requeueAhead(cardId, gap) {
+    var target = Math.min(srsSession.pos + gap, srsSession.queue.length);
+    srsSession.queue.splice(target, 0, cardId);
+  }
+
   function answerSrs(grade) {
     if (!srsSession || !srsSession.showingAnswer) return;
     var cardId = srsSession.queue[srsSession.pos];
+    var st = DATA.srs[cardId];
+
+    // Learning step: a brand-new card graded Bien is shown once more later
+    // in the same session before it graduates to a 1-day interval. Seeing a
+    // new item twice in its first sitting is a large first-encoding win —
+    // one exposure then a day's gap is where most forgetting happened.
+    if (grade === "good" && st && st.reps === 0 && !srsSession.stepped[cardId]) {
+      srsSession.stepped[cardId] = true;
+      requeueAhead(cardId, 6);
+      srsSession.pos++;
+      renderSrsStep();
+      return;
+    }
+
     gradeSrsCard(cardId, grade);
     srsSession.reviewed++;
     if (grade === "again") {
-      // must be seen again this session until graded Bien/Fácil
-      srsSession.queue.push(cardId);
+      // must be seen again this session until graded Bien/Fácil, and it has
+      // to re-earn its learning step
+      srsSession.stepped[cardId] = false;
+      requeueAhead(cardId, 5);
     }
     srsSession.pos++;
     renderSrsStep();

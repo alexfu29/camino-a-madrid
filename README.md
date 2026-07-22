@@ -41,8 +41,18 @@ automatically; every day is one tap to start.
   external app, no account, no import step. Tap "repasar →" on the tracker's
   card row, grade each card **Otra vez / Bien / Fácil**, and its schedule
   (SM-2 lite) syncs across devices through the same GitHub token as the rest
-  of the data. About 10 new cards a day, phase order (1 → 2 → 3), due cards
-  first. (`deck/madrid_spanish.apkg` still exists for anyone who'd rather use
+  of the data. About 10 new cards a day in phase order (1 → 2 → 3), sessions
+  capped at ~24 cards so they stay near 5 minutes.
+
+  How the scheduling works: a **new card is shown twice in its first
+  session** (a short learning step) before it graduates to a 1-day interval —
+  one exposure followed by a whole day's gap is where most forgetting
+  happens. After that, intervals run 1 day → 3 days → ×2.5 each success,
+  with ±10% jitter on intervals of 4+ days so cards learned together don't
+  march in lockstep and pile up on one day. New and due cards are
+  **interleaved** rather than shown due-first, and the due order is reshuffled
+  daily so you learn the material rather than the sequence. Seeing yesterday's
+  cards again today is intentional — that 1-day gap is the point. (`deck/madrid_spanish.apkg` still exists for anyone who'd rather use
   real Anki — see "Rebuilding the deck" below.)
 - **Minimum viable day (bad-day fallback) — 3′.** 5 flashcards + one sentence
   said out loud. Counts. Better than zero.
