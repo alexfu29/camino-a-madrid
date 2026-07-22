@@ -1537,11 +1537,24 @@
     });
   }
 
+  // 20s rather than 2s: each push is a real commit to the repo, and grading
+  // a card fires a save. A short debounce turned one review session into a
+  // dozen commits. Nothing is at risk while we wait — localStorage already
+  // has the data, and an unsent change syncs on the next open.
   function scheduleSync() {
     if (!getPAT()) return;
     if (syncTimer) clearTimeout(syncTimer);
-    syncTimer = setTimeout(function () { syncPush(false); }, 2000);
+    syncTimer = setTimeout(function () { syncTimer = null; syncPush(false); }, 20000);
   }
+  // Flush a pending sync when the app is backgrounded or closed, so a
+  // session's work lands promptly instead of waiting for the next launch.
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden" && syncTimer) {
+      clearTimeout(syncTimer);
+      syncTimer = null;
+      syncPush(false);
+    }
+  });
 
   function setSyncStatus(msg) {
     var el = document.getElementById("syncStatus");
