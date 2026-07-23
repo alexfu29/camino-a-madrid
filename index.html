@@ -1716,8 +1716,37 @@
     return counts.total > 0 ? (counts.total + " para hoy") : "✓ al día";
   }
 
-  // Builds today's session queue: all due cards (csv order), then new cards
-  // (phase 1 -> 2 -> 3, csv order within phase), capped at the remaining
+  function categoryOf(card) {
+    var t = card.tags || [];
+    for (var i = 0; i < t.length; i++) {
+      if (t[i].indexOf("phase") !== 0) return t[i];
+    }
+    return "otro";
+  }
+  // Round-robin across categories so every day's new cards are a mix.
+  // Straight phase-then-file order front-loads all 25 vosotros conjugation
+  // cards, which meant ~2.5 days of pure conjugation drilling before the
+  // first vocab card ever appeared. Phase still orders the pool (earlier
+  // phases drain first), category just rotates within it.
+  function orderNewCards(pool) {
+    var byCat = {}, cats = [];
+    pool.forEach(function (id) {
+      var cat = categoryOf(CARDS_BY_ID[id]);
+      if (!byCat[cat]) { byCat[cat] = []; cats.push(cat); }
+      byCat[cat].push(id);
+    });
+    var out = [], remaining = pool.length;
+    while (remaining > 0) {
+      for (var i = 0; i < cats.length; i++) {
+        var list = byCat[cats[i]];
+        if (list.length) { out.push(list.shift()); remaining--; }
+      }
+    }
+    return out;
+  }
+
+  // Builds today's session queue: all due cards, then new cards (earlier
+  // phases first, rotating through categories), capped at the remaining
   // new-card allowance for today. Introducing a new card into the queue
   // immediately creates its initial SRS state (due = today) and bumps the
   // daily new-card counter, and persists both — so reopening the reviewer
@@ -1738,7 +1767,9 @@
     }
     var dailyCap = Math.max(0, NEW_CARDS_PER_DAY - srsNewCountToday(dateStr));
     var roomCap = Math.max(0, MAX_SESSION_CARDS - due.length);
-    var newOrdered = newByPhase[1].concat(newByPhase[2]).concat(newByPhase[3])
+    var newOrdered = orderNewCards(newByPhase[1])
+      .concat(orderNewCards(newByPhase[2]))
+      .concat(orderNewCards(newByPhase[3]))
       .slice(0, Math.min(dailyCap, roomCap));
     var introduced = false;
     newOrdered.forEach(function (id) {
@@ -1775,7 +1806,12 @@
       st.due = isoDate(addDays(today, st.iv));
       st.reps += 1;
     } else if (grade === "easy") {
-      st.iv = fuzzInterval(Math.max(2, Math.round((st.iv || 1) * st.ease / 100 * 1.3)));
+      // A brand-new card marked Fácil jumps straight to 4 days (Anki's
+      // default "easy interval"); an established one gets its usual
+      // multiplier with a 1.3 bonus.
+      st.iv = st.reps === 0
+        ? 4
+        : fuzzInterval(Math.max(2, Math.round((st.iv || 1) * st.ease / 100 * 1.3)));
       st.ease += 15;
       st.due = isoDate(addDays(today, st.iv));
       st.reps += 1;
